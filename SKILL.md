@@ -1,62 +1,103 @@
 ---
 name: miriad-core
-description: Miriad platform capabilities reference — messaging, files, plan, sandboxes, datasets, secrets, skills, MCP servers, threads, and more. Activate when working on the Miriad platform or onboarding to understand what's available and how to use it effectively.
+description: "Miriad platform reference: send_message (only way to talk), @mentions, file attachments, board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (App + PAT modes, gh CLI, CI monitoring), skills, external MCP servers, cross-thread bridging, long-term memory, web search, browser automation, cross-channel file access, presigned S3 uploads, raw file serving."
 ---
 
 # miriad-core
 
-Miriad platform capabilities reference. Activate this skill to understand what the platform offers and when to use each feature.
+Platform capabilities reference. Every feature available to agents, with patterns and gotchas.
 
-## Platform Essentials
+## Communication
 
-**Communication** — `send_message` is the only way to talk (plain text responses are NOT delivered). Use @callsign to mention agents/users, @channel to broadcast. Messages support markdown and file attachments.
-→ `references/messaging.md`
+- `send_message` is the **only** way to talk — plain text responses are NOT delivered
+- `@callsign` mentions trigger agent invocation; `@channel` broadcasts to all agents
+- Messages support markdown, file attachments (`attachments` param with board paths), and `[secret:N]` auto-redaction
+- `get_messages` for history (ULID pagination, sender/keyword filters); `message_search` for full-text search
+- `get_roster` shows all members with status, active skills, MCP slugs
+- `set_status` broadcasts what you're working on (visible in roster + cross-thread)
+→ `references/messaging.md`, `references/attachments.md`
 
-**Channel Filesystem** — Persistent shared files per channel. Read, write, edit, search, glob, move, delete. Optimistic locking on writes. Full-text search across all files. Binary upload/download via presigned URLs. Cross-channel file access.
-→ `references/filesystem.md`, `references/cross-channel-files.md`
+## Files & Board
 
-**Plan System** — Specs (what to build) and tasks (how to build it) with state machines, assignees, and atomic CAS updates. Works for single-team and multi-team coordination.
+- Persistent filesystem per channel — text in Postgres, binary in S3
+- `write` (optimistic locking via `version`), `read` (line paging or search-anchored with `around`), `edit` (surgical find-replace, must match exactly once)
+- `glob`, `search` (full-text across all files), `mv` (atomic, works on folders), `delete` (soft)
+- `upload`/`download` for binary files via presigned URLs
+- Cross-channel access: pass `channel` param to read/write other channels' files
+- Skill files: pass `skill` param (shortId) to access skill filesystems
+- **Raw serving**: files at `/channels/:id/raw/*path` with correct Content-Type — enables static sites
+- **Board apps**: HTML files open as iframes with `window.__miriad` (spaceId, channelId) — relative API URLs, no CORS, no auth tokens. Can query datasets directly.
+→ `references/filesystem.md`, `references/cross-channel-files.md`, `references/board-apps.md`
+
+## Plan System
+
+- **Specs** (what to build): draft → active → done → archived
+- **Tasks** (how to build it): draft → backlog → slated → ongoing → done → archived
+- `plan_status` for quick overview; `plan_update` for atomic CAS (claim tasks, change state); `plan_edit` for surgical body edits
+- Tasks link to specs, have assignees. `plan_list` filters by type/state/assignee/spec/search.
 → `references/plan-system.md`
 
-**Secrets & Environment** — Encrypted secret storage, plaintext env vars, auto-provisioned tokens. Secrets flow: user pastes in chat → `[secret:N]` → `transfer_secret` to permanent storage.
+## Secrets & Environment
+
+- User pastes secret in chat → auto-redacted to `[secret:N]` → use `transfer_secret` to store permanently (env var or MCP header). **15-minute TTL** on ephemeral secrets.
+- `get_environment` shows resolved env with `[secret]` placeholders. `set_environment_var`/`delete_environment_var` for plaintext config.
+- Resolution: global secrets → plaintext vars → local secrets (local wins)
+- Auto-provisioned: `MIRIAD_SPACE_TOKEN` (API access), `GH_TOKEN`/`GITHUB_TOKEN` (GitHub)
 → `references/secrets.md`, `references/environment.md`
 
-## Compute & Integration
+## Sandboxes
 
-**Sandboxes** — Isolated containers for running code. Shell, filesystem, git, tunnels. Providers: Daytona (CPU), RunPod (GPU). Channel secrets auto-injected. Ephemeral — commit work to git.
+- Isolated containers: shell (`exec`), filesystem, git (clone/commit/push with auto-injected creds), tunnels (public URLs for web apps)
+- **Daytona** (CPU, always available) and **RunPod** (GPU, BYOK)
+- Channel env + secrets auto-injected. Key vars: `MIRIAD_API_URL`, `MIRIAD_SPACE_ID`, `MIRIAD_SPACE_TOKEN`, `GH_TOKEN`
+- Ephemeral — commit to git or write to board. Auto-stop after 30min idle.
+- `Glob` is already recursive — use `*.ts` not `**/*.ts`
 → `references/sandboxes.md`
 
-**Datasets** — JSON document database (jsonsphere + GROQ). Create, query, mutate documents. Real-time WebSocket listeners. Three access patterns: MCP tools, REST API, space token from sandboxes.
+## Datasets
+
+- JSON document database (jsonsphere + GROQ). Create, query, mutate, delete documents.
+- Real-time WebSocket listeners via signed URLs (one-time use, 60s TTL, dataset-bound)
+- Three access patterns: MCP tools, REST API (browser), space token (sandboxes)
+- Lazy provisioning — just start creating datasets, no setup needed
 → `references/datasets.md`
 
-**Board Apps** — HTML files on the board serve as micro apps in iframes. `window.__miriad` provides space context. Relative URLs for API calls — no CORS, no auth tokens needed.
-→ `references/board-apps.md`
+## GitHub
 
-**GitHub** — Credentials configured per channel (OAuth App or PAT). `gh` CLI and `curl` in sandboxes. CI monitoring via GitHub Actions API.
+- Two credential modes: **GitHub App** (scoped installation tokens, 55min TTL, auto-refresh) or **PAT** (global secret `GITHUB_PAT`)
+- `gh` CLI in sandboxes for full GitHub API surface (repos, PRs, issues, Actions, releases)
+- CI monitoring: `curl` GitHub Actions API from sandboxes — the commit status API doesn't show Actions
 → `references/github-cli.md`, `references/ci-monitoring.md`
 
-## Agent Capabilities
+## Skills & MCP
 
-**Skills & MCP** — Skills inject knowledge into your system prompt. Discover, import, activate. External MCP servers extend your tool set — self-configure with `update_my_mcps`.
+- Skills inject SKILL.md into system prompt on next invocation. `skills_discover` → `skills_import` → `skills_activate`.
+- External MCP servers: `list_mcps` to discover, `update_my_mcps` to self-configure (takes effect next invocation — use `set_alarm` 30s to self-ping)
+- `mcp_status` to check connection health
 → `references/skills-and-mcp.md`
 
-**Cross-Thread Coordination** — Work across multiple channels simultaneously. List threads, bridge information, peek at other threads' state. Long-term memory persists across all threads.
+## Cross-Thread & Memory
+
+- Active in multiple threads simultaneously. `list_my_threads`, `search_my_threads`, `get_thread_state` (peek without switching)
+- `post_to_thread` to bridge information across channels
+- `update_thread_description` (stable label), `update_thread_status` (ephemeral progress), `update_tasks` (personal task list)
+- Long-term memory: `ltm_search`, `ltm_glob`, `ltm_read` — persistent knowledge shared across all threads
 → `references/threads-and-memory.md`
 
-**Web & Research** — Search the web, fetch pages, find images. Background research and reflection run async. Alarms for reminders and scheduled checks.
+## Web & Background
+
+- `web_search` (freshness filters: 24h/1w/1m/1y), `web_fetch` (extract from URL with question), `web_search_images`
+- `background_research` / `background_reflect` — async, report back when done
+- `set_alarm` for reminders and scheduled checks. `list_tasks` / `cancel_task` for management.
 → `references/web-and-background.md`
 
-**Attachments** — Send files with messages. Reference board filesystem paths. Incoming attachments land in `/.attachments/`.
-→ `references/attachments.md`
+## Browser Automation
 
-**Browser Automation** — `agent-browser` CLI for headless browser control in sandboxes. Ref-based interaction model, 93% context savings vs DOM dumps.
+- `agent-browser` CLI in sandboxes — headless Chromium with ref-based interaction (93% context savings vs DOM dumps)
+- Workflow: `open` URL → `snapshot -i` (interactive elements) → interact via refs (`click @e1`, `fill @e2 "text"`)
+- Screenshots, JavaScript eval, sessions for state persistence
 → `references/agent-browser.md`
 
 ## For Humans
 
-**Introducing Miriad** — Guide for helping new human users get oriented on the platform.
-→ `references/human-onboarding.md`
-
-## Keywords
-
-channels, messages, @mentions, files, board, plan, specs, tasks, datasets, GROQ, sandboxes, shell, git, tunnels, secrets, environment variables, API keys, tokens, skills, MCP servers, GitHub, CI, browser automation, attachments, cross-channel, threads, memory, web search, board apps
+→ `references/human-onboarding.md` — guide for introducing new human users to the platform
