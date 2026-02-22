@@ -1,12 +1,15 @@
 # Auto-refresh miriad-core skill on all Miriad instances.
 #
-# On push to main, curls the /skills/refresh endpoint to trigger
-# a re-import of the skill from this repo. The endpoint calls the
-# existing importSkill() function which fetches the latest SKILL.md
-# and reference files from git.
+# On push to main, curls the /skills/refresh endpoint on both staging
+# and production to trigger a re-import of the skill from this repo.
+# The endpoint calls the existing importSkill() function which fetches
+# the latest SKILL.md and reference files from git.
 #
 # The endpoint is unauthenticated — it only accepts known source URLs
 # and the import is idempotent (overwrites existing skill files).
+#
+# Production curl has || true — will 404 until go-live, shouldn't
+# fail the action.
 
 name: Refresh Skill
 
@@ -20,9 +23,15 @@ jobs:
     steps:
       - name: Trigger skill refresh
         run: |
-          curl -sf -X POST https://app.miriad.systems/skills/refresh \
+          curl -sf -X POST https://miriad-staging.fly.dev/skills/refresh \
             -H 'Content-Type: application/json' \
             -d '{"source":"sanity-labs/skill-miriad-core"}' \
             --max-time 30 \
             --retry 2 \
             --retry-delay 5
+          curl -sf -X POST https://app.miriad.systems/skills/refresh \
+            -H 'Content-Type: application/json' \
+            -d '{"source":"sanity-labs/skill-miriad-core"}' \
+            --max-time 30 \
+            --retry 2 \
+            --retry-delay 5 || true
