@@ -121,21 +121,21 @@ Multiple sessions can run concurrently for multi-tab or multi-site workflows.
 Board apps served from the Miriad filesystem require a session cookie for API access. In a headless browser, use the **agent login endpoint** to authenticate:
 
 ```
-GET /auth/agent-login?token=<MIRIAD_SPACE_TOKEN>&redirect=<url>
+GET /auth/agent-login?token=<MIRIAD_SPACE_TOKEN>&redirect=<path>
 ```
 
-This endpoint validates the space token, sets a session cookie (space-scoped, session lifetime), and redirects to the target URL. The `redirect` parameter must be same-origin.
+This endpoint validates the space token, sets a `miriad-agent-session` cookie (space-scoped, HttpOnly, Secure, SameSite=Lax), and 302 redirects to the target path. The `redirect` parameter is **required** (returns 400 without it) and must be a same-origin path.
 
 ### Authentication Flow
 
 ```bash
-# 1. Build the auth URL with redirect to your board app
-AUTH_URL="https://miriad-staging.fly.dev/auth/agent-login?token=${MIRIAD_SPACE_TOKEN}&redirect=/spaces/${SPACE_ID}/channels/${CHANNEL_ID}/files/my-app/index.html"
+# Environment variables are auto-injected in sandboxes:
+#   MIRIAD_API_URL, MIRIAD_SPACE_ID, MIRIAD_CHANNEL_ID, MIRIAD_SPACE_TOKEN
 
-# 2. Open the auth URL — browser gets session cookie + redirects to app
-agent-browser open "$AUTH_URL"
+# 1. Authenticate and redirect straight to your board app
+agent-browser open "$MIRIAD_API_URL/auth/agent-login?token=$MIRIAD_SPACE_TOKEN&redirect=/channels/$MIRIAD_CHANNEL_ID/raw/my-app/index.html"
 
-# 3. Now authenticated — interact with the board app
+# 2. Browser now has a session cookie — all subsequent navigation is authenticated
 agent-browser snapshot -i
 agent-browser click @e1
 ```
@@ -148,30 +148,33 @@ A typical board app testing workflow:
 
 ```bash
 # Install agent-browser in sandbox
+sudo rm -f /etc/apt/sources.list.d/yarn.list   # Fix broken yarn repo on Daytona
 npm install -g agent-browser
 agent-browser install --with-deps
 
 # Authenticate and navigate to the app
-agent-browser open "https://miriad-staging.fly.dev/auth/agent-login?token=${MIRIAD_SPACE_TOKEN}&redirect=/spaces/${SPACE_ID}/channels/${CHANNEL_ID}/files/dashboard/index.html"
+agent-browser open "$MIRIAD_API_URL/auth/agent-login?token=$MIRIAD_SPACE_TOKEN&redirect=/channels/$MIRIAD_CHANNEL_ID/raw/my-app/index.html"
 
 # Wait for the app to load (SPAs may fetch data async)
-agent-browser wait --load networkidle
+agent-browser wait 3000
 
 # Verify the app rendered correctly
 agent-browser snapshot -i
 agent-browser screenshot /tmp/app.png
 
 # Interact with the app
-agent-browser click @e1
-agent-browser wait --load networkidle
-agent-browser snapshot -i
+agent-browser fill @e1 "search query"
+agent-browser wait 2000
+agent-browser screenshot /tmp/after-interaction.png
+
 ```
 
 ### Security Notes
 
 - **Token in URL is acceptable** — the browser runs headless in a scrubbed sandbox with no history persistence
-- **Session cookie is space-scoped** — only grants access to the space the token belongs to
+- **Session cookie is space-scoped** — matches the space token's permissions (content/work objects, denied config routes)
 - **Same-origin redirect only** — the `redirect` parameter is validated to prevent open redirect attacks
+- **Cookie lifetime** — session cookie (no explicit expiry), dies when the browser process ends
 - **Use `MIRIAD_SPACE_TOKEN`** from the sandbox environment — it's injected automatically
 
 ## Practical Examples
