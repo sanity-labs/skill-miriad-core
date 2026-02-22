@@ -116,6 +116,64 @@ agent-browser --session-name myapp open https://app.example.com
 
 Multiple sessions can run concurrently for multi-tab or multi-site workflows.
 
+## Authenticating with Miriad Board Apps
+
+Board apps served from the Miriad filesystem require a session cookie for API access. In a headless browser, use the **agent login endpoint** to authenticate:
+
+```
+GET /auth/agent-login?token=<MIRIAD_SPACE_TOKEN>&redirect=<url>
+```
+
+This endpoint validates the space token, sets a session cookie (space-scoped, session lifetime), and redirects to the target URL. The `redirect` parameter must be same-origin.
+
+### Authentication Flow
+
+```bash
+# 1. Build the auth URL with redirect to your board app
+AUTH_URL="https://miriad-staging.fly.dev/auth/agent-login?token=${MIRIAD_SPACE_TOKEN}&redirect=/spaces/${SPACE_ID}/channels/${CHANNEL_ID}/files/my-app/index.html"
+
+# 2. Open the auth URL — browser gets session cookie + redirects to app
+agent-browser open "$AUTH_URL"
+
+# 3. Now authenticated — interact with the board app
+agent-browser snapshot -i
+agent-browser click @e1
+```
+
+After step 2, the browser has a valid session cookie. All subsequent navigation and API calls from the board app work automatically — the cookie persists for the session.
+
+### Testing Board Apps End-to-End
+
+A typical board app testing workflow:
+
+```bash
+# Install agent-browser in sandbox
+npm install -g agent-browser
+agent-browser install --with-deps
+
+# Authenticate and navigate to the app
+agent-browser open "https://miriad-staging.fly.dev/auth/agent-login?token=${MIRIAD_SPACE_TOKEN}&redirect=/spaces/${SPACE_ID}/channels/${CHANNEL_ID}/files/dashboard/index.html"
+
+# Wait for the app to load (SPAs may fetch data async)
+agent-browser wait --load networkidle
+
+# Verify the app rendered correctly
+agent-browser snapshot -i
+agent-browser screenshot /tmp/app.png
+
+# Interact with the app
+agent-browser click @e1
+agent-browser wait --load networkidle
+agent-browser snapshot -i
+```
+
+### Security Notes
+
+- **Token in URL is acceptable** — the browser runs headless in a scrubbed sandbox with no history persistence
+- **Session cookie is space-scoped** — only grants access to the space the token belongs to
+- **Same-origin redirect only** — the `redirect` parameter is validated to prevent open redirect attacks
+- **Use `MIRIAD_SPACE_TOKEN`** from the sandbox environment — it's injected automatically
+
 ## Practical Examples
 
 ### Fill a form
