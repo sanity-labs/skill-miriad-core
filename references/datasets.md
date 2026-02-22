@@ -165,6 +165,55 @@ The signed URL is **one-time-use** (consumed on connect), expires in **60 second
 }
 ```
 
+### GROQ filter and projection
+
+Listeners support server-side filtering and projection using GROQ expressions. Only matching events with the fields you need are sent over the WebSocket.
+
+**Query parameters** (appended to the signed URL from `listen-token`):
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `filter` | GROQ filter expression (e.g., `_type == 'post'`) | All events pass through |
+| `projection` | GROQ projection expression (e.g., `{title, author, _id, _rev}`) | Document stub (`_id`, `_rev`, `_type`) |
+
+Example URL:
+```
+wss://jsonsphere.fly.dev/.../listen?token=jsT_...&filter=_type == 'post'&projection={title, author, _id, _rev}
+```
+
+**Limits:** Both expressions capped at **4KB**. Projection must produce an object — scalar projections (e.g., `count(*)`) are rejected at parse time.
+
+### Mid-connection reconfiguration
+
+Send a `configure` message to update filter/projection on an active connection:
+
+```json
+{
+  "type": "configure",
+  "filter": "_type == 'post' && status == 'published'",
+  "projection": "{title, _id, _rev}"
+}
+```
+
+**Three-state field semantics:**
+- **Omit a field** → keep current value
+- **Set to `null`** → clear to default (all events / document stub)
+- **Set to a string** → use new GROQ expression
+
+**Server acknowledgment:** Successful configure returns a `configured` event echoing the effective values (including preserved ones from partial updates):
+
+```json
+{
+  "type": "configured",
+  "filter": "_type == 'post' && status == 'published'",
+  "projection": "{title, _id, _rev}"
+}
+```
+
+**Rate limiting:** 1 configure message per second per connection. Excess messages get an error event; current config preserved.
+
+**Error handling:** Invalid GROQ returns an error event and preserves the previous working config — the connection is never dropped.
+
 ### Event shapes
 
 Events are JSON objects with a `type` field. Create and update events include a `document` stub; delete events use top-level `id` and `rev` (since the document no longer exists).
@@ -302,4 +351,7 @@ wscat -c "$WS_URL"
 - **Resumable** — pass `since` on the WebSocket URL (appended to the signed URL) to replay missed events after reconnection. See "Resuming streams" above.
 - **Gap detection** — if the `since` cursor has fallen off the ~5000 entry retention window, the server sends `{"type": "reset", "reason": "gap_too_large"}` and closes. Client should re-fetch state and reconnect fresh.
 - **Reconnection** — on disconnect, call `listen-token` again with `lastEventId` for a new signed URL. Use jittered exponential backoff to avoid thundering herd.
+- **Filterable** — pass `filter` on the WebSocket URL or via `configure` message to receive only matching events. GROQ expressions, 4KB limit.
+- **Projectable** — pass `projection` to control which fields are included in events. Must produce an object.
+- **Reconfigurable** — send `configure` messages to update filter/projection mid-connection. Server echoes back effective config via `configured` ack.
 
