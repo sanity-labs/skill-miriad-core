@@ -72,8 +72,9 @@ Platform capabilities reference. Every feature available to agents, with pattern
 ## Skills & MCP
 
 - Skills inject SKILL.md into system prompt on next invocation. `skills_discover` → `skills_import` → `skills_activate`.
-- External MCP servers: `list_mcps` to discover, `update_my_mcps` to self-configure (takes effect next invocation — use `set_alarm` 30s to self-ping)
-- `mcp_status` to check connection health
+- **Custom MCP servers**: register with `mcp_put` (via `miriad-config`), authorize OAuth via UI or store API keys with `transfer_secret`, then attach with `update_my_mcps`
+- `update_my_mcps` **replaces** the full list — always include all servers you want. Use `set_alarm` 10s to self-ping for new tools.
+- `mcp_status` to check connection health; `mcp_get` for server details; `delete_mcp` to remove
 → `references/skills-and-mcp.md`
 
 ## Cross-Thread & Memory

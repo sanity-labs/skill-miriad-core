@@ -43,29 +43,80 @@ Best practice: keep SKILL.md under 200 lines. Put detailed reference material in
 
 ## MCP Servers
 
-MCP (Model Context Protocol) servers provide tools. Miriad has built-in servers and supports external ones.
+MCP (Model Context Protocol) servers provide tools. Miriad has built-in servers and supports custom external ones.
 
 ### Built-in Servers
 
 | Server | Tools | Capabilities |
 |--------|-------|-------------|
-| **miriad** | ~40 | Messaging, files, plan, skills, environment, secrets, roster |
-| **miriad-sandbox** | ~17 | Sandbox lifecycle, filesystem, shell, git, tunnels |
+| **miriad** | ~27 | Messaging, files, plan, skills, roster |
+| **miriad-config** | ~11 | Environment, secrets, MCP server management, skill management |
+| **miriad-sandbox** | ~20 | Sandbox lifecycle, filesystem, shell, git, tunnels |
 | **miriad-dataset** | ~6 | Dataset CRUD, GROQ queries, document operations |
-| **miriad-vision** | ~1 | Image analysis (describe, detect objects, extract colors) |
+| **miriad-vision** | ~1 | Image analysis (describe, extract colors) |
 
-### External Servers
+Built-in servers are always available. Use `update_my_mcps` to add optional ones (like `miriad-vision` or `miriad-config`) to your tool set.
 
-Spaces can configure additional MCP servers for external integrations.
+### Attaching MCP Servers
 
 ```
-list_mcps()                                          // discover available servers
-update_my_mcps({ slugs: ["miriad-sandbox", "my-mcp"] })  // self-configure
-mcp_status()                                         // check connection status
+update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset", "miriad-config"] })
 ```
 
-`update_my_mcps` takes effect on your next invocation. Use `mcp_status` to diagnose connection issues.
+**Important:** `update_my_mcps` **replaces** your entire MCP list — always include all servers you want, not just the new one. Changes take effect on your next invocation. Use `set_alarm({ delay: "10s" })` to self-ping and pick up the new tools.
 
-### GitHub MCP
+```
+mcp_status()    // check which servers are connected and how many tools each provides
+```
 
-When GitHub credentials are configured (`GH_TOKEN` available), a GitHub MCP server is auto-included. For full GitHub API access, the `gh` CLI in sandboxes is often more capable — see `github-cli.md`.
+### Custom MCP Servers
+
+Spaces can register external MCP servers for third-party integrations (e.g., Sanity, Stripe, Notion). The `miriad-config` MCP provides tools to manage these:
+
+#### Registering a Server
+
+```
+mcp_put({
+  slug: "sanity",
+  url: "https://mcp.sanity.io",
+  name: "Sanity",
+  description: "Sanity.io content management"
+})
+```
+
+This creates the server registration. If the server uses **OAuth**, the user completes the authorization flow through the Miriad UI. If it uses **API key auth**, use `transfer_secret` to store the key as an MCP header:
+
+```
+transfer_secret({
+  messageId: "<ULID>",
+  secretIndex: 0,
+  destination: "mcp_header",
+  key: "Authorization",
+  mcpSlug: "my-server",
+  template: "Bearer {secret}"
+})
+```
+
+#### Managing Servers
+
+```
+mcp_get({ slug: "sanity" })       // get details (URL, name, headers, OAuth status)
+delete_mcp({ slug: "sanity" })    // remove a custom server
+```
+
+`mcp_get` returns the server's OAuth status (`oauth.connected`, `oauth.authorizedAt`) and header keys (values are redacted).
+
+#### Activating for Yourself
+
+After registering a custom server, add it to your MCP list:
+
+```
+update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset", "miriad-config", "sanity"] })
+```
+
+Then set an alarm to pick up the new tools on your next turn.
+
+### GitHub
+
+GitHub integration uses the `gh` CLI in sandboxes rather than an MCP server. Credentials (`GH_TOKEN`, `GITHUB_TOKEN`) are injected into sandboxes from channel environment. See `github-cli.md` for details.
+
