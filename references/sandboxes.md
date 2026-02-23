@@ -26,32 +26,73 @@ Sandboxes auto-stop after idle timeout (default 30 minutes). After auto-stop, yo
 
 ```
 exec({ sandbox: "my-sandbox", command: "npm install" })
-exec({ sandbox: "my-sandbox", command: "npm test", cwd: "/home/user/project", extended: true })
+exec({ sandbox: "my-sandbox", command: "npm test", cwd: "/home/daytona/project" })
 exec({ sandbox: "my-sandbox", command: "long-task", timeout: 300 })  // 5 min timeout
 ```
 
-Default timeout is 120 seconds. **Output limited to 2KB** by default. Set `extended: true` for up to 50KB (use for test results, build logs, diffs). When output exceeds the limit, full output is saved to a temp file in the sandbox — the response tells you the path.
+Default timeout is 120 seconds. Returns stdout, stderr, and exit code.
+
+### Output limits (context window control)
+
+Output is **capped at ~2KB by default** to protect context windows. When output exceeds the limit:
+- `truncated: true` is set in the response
+- Full output is saved to a temp file (e.g., `/tmp/.miriad-cmd-{timestamp}.log`)
+- A `hint` tells you where to find the full output
+
+```
+// Default: ~2KB output limit
+exec({ sandbox: "s", command: "npm test" })
+// → { truncated: true, full_output: "/tmp/.miriad-cmd-1771849544899.log",
+//    hint: "Output truncated... Use exec to grep/head/tail that file." }
+
+// Extended: ~50KB for test results, build logs, diffs
+exec({ sandbox: "s", command: "npm test", extended: true })
+```
+
+**Use `extended: true`** for commands where you need full output (test suites, build logs, large diffs). Default mode is best for most commands — keeps context lean.
+
+**Tip:** When output is truncated, use targeted follow-up commands instead of re-running with extended:
+```
+exec({ sandbox: "s", command: "tail -50 /tmp/.miriad-cmd-1771849544899.log" })
+exec({ sandbox: "s", command: "grep -n 'FAIL' /tmp/.miriad-cmd-1771849544899.log" })
+```
 
 ## Filesystem
 
 ```
-Read({ sandbox: "my-sandbox", path: "/home/user/project/src/index.ts" })
-Read({ sandbox: "my-sandbox", path: "/home/user/project/src/index.ts", offset: 45, limit: 30 })
-Write({ sandbox: "my-sandbox", path: "/home/user/app.js", content: "..." })
-Edit({ sandbox: "my-sandbox", path: "/home/user/app.js", old_string: "...", new_string: "..." })
+Read({ sandbox: "my-sandbox", path: "/home/daytona/project/src/index.ts" })
+Write({ sandbox: "my-sandbox", path: "/home/daytona/app.js", content: "..." })
+Edit({ sandbox: "my-sandbox", path: "/home/daytona/app.js", old_string: "...", new_string: "..." })
 Glob({ sandbox: "my-sandbox", pattern: "*.ts" })
-Grep({ sandbox: "my-sandbox", pattern: "TODO", path: "/home/user/project" })
+Grep({ sandbox: "my-sandbox", pattern: "TODO", path: "/home/daytona/project" })
 ```
 
-**Read** returns line-numbered content (50 lines default, up to 2000). Use `offset`/`limit` to navigate. For large files, use Grep to find specific code first, then Read with offset to view it.
+### Read: line numbers and paging
 
-**Grep** returns up to 100 matches with line numbers compatible with Read's offset. Use `offset` for pagination.
+Read returns **line-numbered output** with padded alignment:
+```
+ 1	func main() {
+ 2	    fmt.Println("hello")
+ 3	}
+```
 
-**Glob** returns up to 100 files. Use `offset` for pagination.
+Default limit is **50 lines**. Response includes `total_lines`, `total_bytes`, `offset`, and `lines_returned`. When there's more content, a hint nudges you toward targeted reads:
+
+```
+// Default: first 50 lines
+Read({ sandbox: "s", path: "/home/daytona/big-file.ts" })
+// → { total_lines: 500, lines_returned: 50, hint: "💡 Use Grep to find specific code..." }
+
+// Jump to a specific region
+Read({ sandbox: "s", path: "/home/daytona/big-file.ts", offset: 100, limit: 30 })
+
+// Max: 2000 lines per read
+Read({ sandbox: "s", path: "/home/daytona/big-file.ts", limit: 2000 })
+```
+
+**Best practice:** Use `Grep` to find what you're looking for first, then `Read` with `offset` to see the surrounding context. Avoid reading entire large files.
 
 **Note**: Sandbox `Glob` is already recursive — use `*.ts` not `**/*.ts`.
-
-→ See `references/code-exploration.md` for efficient codebase exploration patterns.
 
 ## Git
 
