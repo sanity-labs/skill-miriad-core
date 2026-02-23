@@ -99,6 +99,16 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - Screenshots, JavaScript eval, sessions for state persistence
 → `references/agent-browser.md`
 
+## Stdio MCP Servers
+
+- Run **any stdio MCP server** from a sandbox using `mcptools` — no permanent MCP configuration needed
+- More flexible than mounted MCPs: install, call tools on demand, tear down. No OAuth, no slug registration.
+- Install `mcptools`: `apt install golang-go && go install github.com/f/mcptools/cmd/mcptools@latest`
+- Usage: `mcptools tools <server-cmd>` to list tools, `mcptools call <tool> <server-cmd> -p '{...}'` to invoke
+- API keys flow through environment: configure secret in UI → create sandbox (auto-injected) → server reads from env
+- Works with any ecosystem MCP server: fal.ai (18 tools for AI generation), filesystem, databases, etc.
+→ `references/stdio-mcp-servers.md`
+
 ## For Humans
 
 → `references/human-onboarding.md` — guide for introducing new human users to the platform
