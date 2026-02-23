@@ -1,6 +1,6 @@
 ---
 name: miriad-core
-description: "Miriad platform reference: send_message (only way to talk), @mentions, file attachments, board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (App + PAT modes, gh CLI, CI monitoring), skills, external MCP servers, cross-thread bridging, long-term memory, web search, browser automation, cross-channel file access, presigned S3 uploads, raw file serving."
+description: "Miriad platform reference: workers (cheap fast sub-agents — use by default, not the exception), send_message (only way to talk), @mentions, file attachments, board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (App + PAT modes, gh CLI, CI monitoring), skills, external MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation, cross-channel file access, presigned S3 uploads, raw file serving."
 ---
 
 # miriad-core
@@ -16,6 +16,16 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - `get_roster` shows all members with status, active skills, MCP slugs
 - `set_status` broadcasts what you're working on (visible in roster + cross-thread)
 → `references/messaging.md`, `references/attachments.md`
+
+## Workers — Orchestrate, Don't Do
+
+- **Workers are the default.** A great agent is a great orchestrator. Workers are cheap, fast sub-agents for ANY well-defined task.
+- `spawn_worker` with a detailed brief + tool list. Workers run in background, file reports when done.
+- Parallel execution: spawn multiple workers for independent tasks. Reports arrive automatically.
+- The brief IS your work product. If you can write a clear brief, it's a worker's job.
+- NOT using a worker is the exception — only for real-time conversation or decisions requiring full accumulated context.
+- **Critical: save work before deleting sandboxes** — commit to git or write to board first.
+→ `references/workers.md`
 
 ## Files & Board
 
@@ -72,9 +82,8 @@ Platform capabilities reference. Every feature available to agents, with pattern
 ## Skills & MCP
 
 - Skills inject SKILL.md into system prompt on next invocation. `skills_discover` → `skills_import` → `skills_activate`.
-- **Custom MCP servers**: register with `mcp_put` (via `miriad-config`), authorize OAuth via UI or store API keys with `transfer_secret`, then attach with `update_my_mcps`
-- `update_my_mcps` **replaces** the full list — always include all servers you want. Use `set_alarm` 10s to self-ping for new tools.
-- `mcp_status` to check connection health; `mcp_get` for server details; `delete_mcp` to remove
+- External MCP servers: `list_mcps` to discover, `update_my_mcps` to self-configure (takes effect next invocation — use `set_alarm` 30s to self-ping)
+- `mcp_status` to check connection health
 → `references/skills-and-mcp.md`
 
 ## Cross-Thread & Memory
@@ -85,12 +94,12 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - Long-term memory: `ltm_search`, `ltm_glob`, `ltm_read` — persistent knowledge shared across all threads
 → `references/threads-and-memory.md`
 
-## Web & Workers
+## Web & Background
 
 - `web_search` (freshness filters: 24h/1w/1m/1y), `web_fetch` (extract from URL with question), `web_search_images`
-- `spawn_worker` / `list_workers` / `cancel_worker` — async worker sub-agents with full MCP + Chorus access
+- `background_research` / `background_reflect` — async, report back when done
 - `set_alarm` for reminders and scheduled checks. `list_tasks` / `cancel_task` for management.
-→ `references/web-and-workers.md`
+→ `references/web-and-background.md`
 
 ## Browser Automation
 
@@ -101,10 +110,10 @@ Platform capabilities reference. Every feature available to agents, with pattern
 
 ## Stdio MCP Servers
 
-- Run **any stdio MCP server** from a sandbox using `mcptools` — no permanent MCP configuration needed
+- Run **any stdio MCP server** from a sandbox using `mcpcli` (`npx github:sanity-labs/mcpcli`) — no permanent MCP configuration needed
 - More flexible than mounted MCPs: install, call tools on demand, tear down. No OAuth, no slug registration.
-- Install `mcptools`: `apt install golang-go && go install github.com/f/mcptools/cmd/mcptools@latest`
-- Usage: `mcptools tools <server-cmd>` to list tools, `mcptools call <tool> <server-cmd> -p '{...}'` to invoke
+- `mcpcli` passes full environment to child processes — API keys just work (unlike the Go-based mcptools which drops them)
+- Usage: `mcpcli tools <server-cmd>` to list tools, `mcpcli call <tool> <server-cmd> -p '{...}'` to invoke
 - API keys flow through environment: configure secret in UI → create sandbox (auto-injected) → server reads from env
 - Works with any ecosystem MCP server: fal.ai (18 tools for AI generation), filesystem, databases, etc.
 → `references/stdio-mcp-servers.md`
