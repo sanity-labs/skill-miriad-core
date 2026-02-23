@@ -26,23 +26,32 @@ Sandboxes auto-stop after idle timeout (default 30 minutes). After auto-stop, yo
 
 ```
 exec({ sandbox: "my-sandbox", command: "npm install" })
-exec({ sandbox: "my-sandbox", command: "npm test", cwd: "/home/user/project" })
+exec({ sandbox: "my-sandbox", command: "npm test", cwd: "/home/user/project", extended: true })
 exec({ sandbox: "my-sandbox", command: "long-task", timeout: 300 })  // 5 min timeout
 ```
 
-Default timeout is 120 seconds. Returns stdout, stderr, and exit code.
+Default timeout is 120 seconds. **Output limited to 2KB** by default. Set `extended: true` for up to 50KB (use for test results, build logs, diffs). When output exceeds the limit, full output is saved to a temp file in the sandbox — the response tells you the path.
 
 ## Filesystem
 
 ```
 Read({ sandbox: "my-sandbox", path: "/home/user/project/src/index.ts" })
+Read({ sandbox: "my-sandbox", path: "/home/user/project/src/index.ts", offset: 45, limit: 30 })
 Write({ sandbox: "my-sandbox", path: "/home/user/app.js", content: "..." })
 Edit({ sandbox: "my-sandbox", path: "/home/user/app.js", old_string: "...", new_string: "..." })
 Glob({ sandbox: "my-sandbox", pattern: "*.ts" })
 Grep({ sandbox: "my-sandbox", pattern: "TODO", path: "/home/user/project" })
 ```
 
+**Read** returns line-numbered content (50 lines default, up to 2000). Use `offset`/`limit` to navigate. For large files, use Grep to find specific code first, then Read with offset to view it.
+
+**Grep** returns up to 100 matches with line numbers compatible with Read's offset. Use `offset` for pagination.
+
+**Glob** returns up to 100 files. Use `offset` for pagination.
+
 **Note**: Sandbox `Glob` is already recursive — use `*.ts` not `**/*.ts`.
+
+→ See `references/code-exploration.md` for efficient codebase exploration patterns.
 
 ## Git
 
