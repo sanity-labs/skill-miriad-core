@@ -85,12 +85,12 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - Long-term memory: `ltm_search`, `ltm_glob`, `ltm_read` — persistent knowledge shared across all threads
 → `references/threads-and-memory.md`
 
-## Web & Background
+## Web & Workers
 
 - `web_search` (freshness filters: 24h/1w/1m/1y), `web_fetch` (extract from URL with question), `web_search_images`
-- `background_research` / `background_reflect` — async, report back when done
+- `spawn_worker` / `list_workers` / `cancel_worker` — async worker sub-agents with full MCP + Chorus access
 - `set_alarm` for reminders and scheduled checks. `list_tasks` / `cancel_task` for management.
-→ `references/web-and-background.md`
+→ `references/web-and-workers.md`
 
 ## Browser Automation
 
