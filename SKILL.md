@@ -62,8 +62,7 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - Channel env + secrets auto-injected. Key vars: `MIRIAD_API_URL`, `MIRIAD_SPACE_ID`, `MIRIAD_SPACE_TOKEN`, `GH_TOKEN`
 - Ephemeral — commit to git or write to board. Auto-stop after 30min idle.
 - `Glob` is already recursive — use `*.ts` not `**/*.ts`
-- **Tool output limits**: `Read` (50 lines default, line numbers), `exec` (2KB default, 50KB extended), `Grep`/`Glob` (100 results). Use targeted tools — grep for finding, Read with offset for viewing.
-→ `references/sandboxes.md`, `references/code-exploration.md`
+→ `references/sandboxes.md`
 
 ## Datasets
 
@@ -94,6 +93,15 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - `update_thread_description` (stable label), `update_thread_status` (ephemeral progress), `update_tasks` (personal task list)
 - Long-term memory: `ltm_search`, `ltm_glob`, `ltm_read` — persistent knowledge shared across all threads
 → `references/threads-and-memory.md`
+
+## Execute — JavaScript Tool Chaining
+
+- `execute` runs JavaScript that calls tools as async functions — **no inference round-trips** between calls
+- Tools available as `serverName__toolName()` (hyphens → underscores): `miriad_sandbox__list({})`, `miriad_dataset__dataset_query({...})`
+- `Promise.all()` for parallel calls — 7 tool calls in ~850ms vs ~30-60s sequential
+- `progress("msg")` for real-time updates, `console.log()` for debugging (shown on error only), `return value` for results
+- Use for: dashboard queries, batch operations, read→transform→write chains, conditional logic
+→ `references/execute.md`
 
 ## Web & Background
 
