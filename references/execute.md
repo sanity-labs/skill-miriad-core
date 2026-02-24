@@ -78,12 +78,54 @@ try {
 }
 ```
 
-## Sandbox Constraints
+## Sandbox Tools from Execute
 
-- **No filesystem access** — use tools to read/write files
-- **No network access** — use tools (web_search, web_fetch) or sandbox exec for HTTP
-- **No imports** — no `require()` or `import`, but all tools are pre-loaded as globals
-- **Secure sandbox** — isolated execution environment
+All sandbox tools work from execute — you can run an entire sandbox lifecycle in one script:
+
+```js
+// Create sandbox, run tests, report, cleanup — zero inference round-trips
+const sb = await miriad_sandbox__create({ name: "test-run" });
+const sbName = "test-run";
+
+// Clone and test
+await miriad_sandbox__exec({ sandbox: sbName, command: "git clone https://github.com/org/repo.git /home/daytona/repo" });
+const tests = await miriad_sandbox__exec({ sandbox: sbName, command: "cd /home/daytona/repo && npm install && npm test", extended: true });
+
+// Read a specific file
+const pkg = await miriad_sandbox__Read({ sandbox: sbName, path: "/home/daytona/repo/package.json" });
+
+// Cleanup
+await miriad_sandbox__delete({ sandbox: sbName });
+
+return { tests, pkg };
+```
+
+Sandbox tool naming follows the same convention: `miriad_sandbox__exec`, `miriad_sandbox__Read`, `miriad_sandbox__Write`, etc.
+
+## Discovering Tools
+
+Use `searchTools()` to find available tools by keyword:
+
+```js
+const tools = await searchTools("dataset");
+// Returns: [{ name, description, serverName, inputSchema }, ...]
+```
+
+This is useful when you're not sure of the exact tool name or want to explore what's available.
+
+## Security Model
+
+Execute runs in a **SES (Secure ECMAScript) sandbox**:
+
+- **No filesystem** — `require`, `import` blocked
+- **No network** — `fetch`, `XMLHttpRequest`, `WebSocket` unavailable
+- **No process** — `process.env`, `child_process` inaccessible
+- **Frozen prototypes** — `Object.prototype`, `Array.prototype` not extensible
+- **No direct eval** — blocked by SES (indirect via `Function` constructor works but can't escape)
+- **Fresh per call** — globalThis is recreated each execution, no state persists between calls
+- **Scoped tools** — only tools granted to the agent/worker appear on globalThis
+
+`Math.random()` and `Date` work normally (real randomness, real wall clock).
 
 ## Practical Examples
 
