@@ -62,7 +62,8 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - Channel env + secrets auto-injected. Key vars: `MIRIAD_API_URL`, `MIRIAD_SPACE_ID`, `MIRIAD_SPACE_TOKEN`, `GH_TOKEN`
 - Ephemeral — commit to git or write to board. Auto-stop after 30min idle.
 - `Glob` is already recursive — use `*.ts` not `**/*.ts`
-→ `references/sandboxes.md`
+- **Tool output limits**: `Read` (50 lines default, line numbers), `exec` (2KB default, 50KB extended), `Grep`/`Glob` (100 results). Use targeted tools — grep for finding, Read with offset for viewing.
+→ `references/sandboxes.md`, `references/code-exploration.md`
 
 ## Datasets
 
