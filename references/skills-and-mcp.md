@@ -55,12 +55,12 @@ MCP (Model Context Protocol) servers provide tools. Miriad has built-in servers 
 | **miriad-dataset** | ~6 | Dataset CRUD, GROQ queries, document operations |
 | **miriad-vision** | ~1 | Image analysis (describe, extract colors) |
 
-Built-in servers are always available. Use `update_my_mcps` to add optional ones (like `miriad-vision` or `miriad-config`) to your tool set.
+Built-in servers `miriad` and `miriad-config` are always loaded. Use `update_my_mcps` to add optional ones (like `miriad-sandbox`, `miriad-dataset`, or `miriad-vision`) to your tool set.
 
 ### Attaching MCP Servers
 
 ```
-update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset", "miriad-config"] })
+update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset"] })
 ```
 
 **Important:** `update_my_mcps` **replaces** your entire MCP list — always include all servers you want, not just the new one. Changes take effect on your next invocation. Use `set_alarm({ delay: "10s" })` to self-ping and pick up the new tools.
@@ -111,7 +111,7 @@ delete_mcp({ slug: "sanity" })    // remove a custom server
 After registering a custom server, add it to your MCP list:
 
 ```
-update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset", "miriad-config", "sanity"] })
+update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset", "sanity"] })
 ```
 
 Then set an alarm to pick up the new tools on your next turn.
