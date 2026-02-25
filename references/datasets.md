@@ -17,12 +17,12 @@ Dataset tools are available inside `execute` scripts. Use `search_tools("dataset
 
 | Tool | Description |
 |------|-------------|
-| `miriad_dataset__dataset_create` | Create a new dataset (name, title, description) |
-| `miriad_dataset__dataset_list` | List all datasets in the space |
-| `miriad_dataset__dataset_delete` | Delete a dataset and all its documents |
-| `miriad_dataset__dataset_mutate` | Create, update, patch, or delete documents (transactional) |
-| `miriad_dataset__dataset_query` | Execute a GROQ query |
-| `miriad_dataset__dataset_get` | Get a single document by `_id` |
+| `miriad__dataset_create` | Create a new dataset (name, title, description) |
+| `miriad__dataset_list` | List all datasets in the space |
+| `miriad__dataset_delete` | Delete a dataset and all its documents |
+| `miriad__dataset_mutate` | Create, update, patch, or delete documents (transactional) |
+| `miriad__dataset_query` | Execute a GROQ query |
+| `miriad__dataset_get` | Get a single document by `_id` |
 
 **Mutations** are passed as a JSON string. Example:
 

@@ -71,9 +71,9 @@ For I/O-heavy pipelines, use `execute({ background: true })` — the script runs
 execute({
   script: `
     // Download, process, transfer — all without blocking conversation
-    const sb = await miriad_sandbox__create({ name: "batch" });
+    const sb = await miriad__sandbox_create({ name: "batch" });
     // ... heavy work ...
-    await miriad_sandbox__delete({ sandbox: "batch" });
+    await miriad__sandbox_delete({ sandbox: "batch" });
     return results;
   `,
   background: true,

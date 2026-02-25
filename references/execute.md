@@ -29,7 +29,7 @@ const tools = await search_tools({ query: "dataset" });
 const tools = await search_tools({ query: "sandbox exec" });
 ```
 
-Tools come from multiple sources — platform built-ins (miriad, miriad-sandbox, miriad-dataset, miriad-config, miriad-vision) and any custom MCP servers registered in the space (e.g., Sanity). You don't need to know which server provides a tool — just search and call.
+Tools come from multiple sources — the platform `miriad` server (files, plan, messages, sandbox, datasets, config, vision) and any custom MCP servers registered in the space (e.g., Sanity). You don't need to know which server provides a tool — just search and call.
 
 ## Tool Naming Convention
 
@@ -38,13 +38,11 @@ Tools are available as async functions using `serverName__toolName` format with 
 | Source | Function prefix | Example |
 |--------|----------------|---------|
 | Platform (files, plan, messages) | `miriad__` | `miriad__plan_status({})` |
-| Sandboxes | `miriad_sandbox__` | `miriad_sandbox__exec({...})` |
-| Datasets | `miriad_dataset__` | `miriad_dataset__dataset_query({...})` |
-| Config (env, secrets, skills) | `miriad_config__` | `miriad_config__get_environment({})` |
-| Vision | `miriad_vision__` | `miriad_vision__vision({...})` |
+| Sandbox tools | `miriad__sandbox_` | `miriad__sandbox_exec({...})` |
+| Dataset tools | `miriad__dataset_` | `miriad__dataset_query({...})` |
 | Custom MCP (e.g., Sanity) | `sanity__` | `sanity__query_documents({...})` |
 
-**Rule:** Hyphens in server names become underscores. The `__` double-underscore separates server from tool.
+**Rule:** All platform tools use the `miriad__` prefix. The `__` double-underscore separates server from tool. Sandbox and dataset tools include their category in the name (e.g., `miriad__sandbox_exec`, `miriad__dataset_query`).
 
 ## Core API
 
@@ -58,8 +56,8 @@ const files = await miriad__glob({ pattern: "*.md" });
 ### Parallel calls with Promise.all
 ```js
 const [sandboxes, datasets, plan] = await Promise.all([
-  miriad_sandbox__list({}),
-  miriad_dataset__dataset_list({}),
+  miriad__sandbox_list({}),
+  miriad__dataset_list({}),
   miriad__plan_status({})
 ]);
 ```
@@ -85,7 +83,7 @@ return { count: results.length, items: results };
 ### Error handling
 ```js
 try {
-  const result = await miriad_sandbox__exec({ sandbox: "s", command: "npm test" });
+  const result = await miriad__sandbox_exec({ sandbox: "s", command: "npm test" });
   return result;
 } catch (e) {
   console.log("Failed:", e.message);
@@ -100,9 +98,9 @@ Use `background: true` for fire-and-forget scripts. The result arrives as a noti
 ```js
 execute({
   script: `
-    const sb = await miriad_sandbox__create({ name: "batch-job" });
+    const sb = await miriad__sandbox_create({ name: "batch-job" });
     // ... long-running work ...
-    await miriad_sandbox__delete({ sandbox: "batch-job" });
+    await miriad__sandbox_delete({ sandbox: "batch-job" });
     return { done: true, results };
   `,
   background: true,
@@ -131,7 +129,7 @@ web_search_images({ query: "low-poly iceberg" })
 
 // Step 2: Execute script processes the results
 execute({ script: `
-  const sb = await miriad_sandbox__create({ name: "download" });
+  const sb = await miriad__sandbox_create({ name: "download" });
   // download images, process, transfer to board...
 `, background: true })
 ```
@@ -142,17 +140,17 @@ All sandbox tools work from execute — run an entire sandbox lifecycle in one s
 
 ```js
 const sbName = "test-run";
-await miriad_sandbox__create({ name: sbName });
+await miriad__sandbox_create({ name: sbName });
 
 // Clone and test
-await miriad_sandbox__exec({ sandbox: sbName, command: "git clone https://github.com/org/repo.git /home/daytona/repo" });
-const tests = await miriad_sandbox__exec({ sandbox: sbName, command: "cd /home/daytona/repo && npm install && npm test", extended: true });
+await miriad__sandbox_exec({ sandbox: sbName, command: "git clone https://github.com/org/repo.git /home/daytona/repo" });
+const tests = await miriad__sandbox_exec({ sandbox: sbName, command: "cd /home/daytona/repo && npm install && npm test", extended: true });
 
 // Read a specific file
-const pkg = await miriad_sandbox__Read({ sandbox: sbName, path: "/home/daytona/repo/package.json" });
+const pkg = await miriad__sandbox_read({ sandbox: sbName, path: "/home/daytona/repo/package.json" });
 
 // Cleanup
-await miriad_sandbox__delete({ sandbox: sbName });
+await miriad__sandbox_delete({ sandbox: sbName });
 
 return { tests, pkg };
 ```
@@ -176,8 +174,8 @@ Execute runs in a **SES (Secure ECMAScript) sandbox**:
 ### Gather platform state in one shot
 ```js
 const [sandboxes, datasets, plan, roster] = await Promise.all([
-  miriad_sandbox__list({}),
-  miriad_dataset__dataset_list({}),
+  miriad__sandbox_list({}),
+  miriad__dataset_list({}),
   miriad__plan_status({}),
   miriad__get_roster({})
 ]);
@@ -187,15 +185,15 @@ return { sandboxes, datasets, plan, roster };
 ### Batch dataset queries
 ```js
 const [top, count, recent] = await Promise.all([
-  miriad_dataset__dataset_query({
+  miriad__dataset_query({
     dataset: "movies",
     query: '*[_type == "movie"] | order(popularity desc) [0..4] { title, popularity }'
   }),
-  miriad_dataset__dataset_query({
+  miriad__dataset_query({
     dataset: "movies",
     query: 'count(*[_type == "movie"])'
   }),
-  miriad_dataset__dataset_query({
+  miriad__dataset_query({
     dataset: "movies",
     query: '*[_type == "movie"] | order(releaseDate desc) [0..2] { title, releaseDate }'
   })

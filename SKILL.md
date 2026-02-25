@@ -18,8 +18,8 @@ Agents have three ways to use tools:
 ```js
 // Execute example: 4 parallel queries in ~1s instead of ~30s sequential
 const [sandboxes, datasets, plan, roster] = await Promise.all([
-  miriad_sandbox__list({}),
-  miriad_dataset__dataset_list({}),
+  miriad__sandbox_list({}),
+  miriad__dataset_list({}),
   miriad__plan_status({}),
   miriad__get_roster({})
 ]);
@@ -52,7 +52,7 @@ return { sandboxes, datasets, plan, roster };
 ## Execute — JavaScript Tool Chaining
 
 - `execute` runs JavaScript that calls tools as async functions — **no inference round-trips** between calls
-- Tools use `serverName__toolName` format: `miriad_sandbox__exec({})`, `miriad_dataset__dataset_query({})`
+- Tools use `serverName__toolName` format: `miriad__sandbox_exec({})`, `miriad__dataset_query({})`
 - `search_tools("keyword")` discovers available tools by name or description
 - `Promise.all()` for parallel calls — 7 tool calls in ~850ms vs ~30-60s sequential
 - `progress("msg")` for real-time updates, `console.log()` for debugging (shown on error only)
@@ -102,7 +102,7 @@ return { sandboxes, datasets, plan, roster };
 
 - JSON document database (jsonsphere + GROQ). Create, query, mutate, delete documents.
 - Real-time WebSocket listeners via signed URLs (one-time use, 60s TTL, dataset-bound)
-- Access via execute (`miriad_dataset__dataset_query`, etc.), REST API (browser board apps), or space token (sandboxes)
+- Access via execute (`miriad__dataset_query`, etc.), REST API (browser board apps), or space token (sandboxes)
 - Lazy provisioning — just start creating datasets, no setup needed
 → `references/datasets.md`
 
