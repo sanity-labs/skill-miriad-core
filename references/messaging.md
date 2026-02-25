@@ -53,7 +53,6 @@ Returns all channel members with:
 - `status` — active/idle
 - `statusMessage` — what they're working on
 - `activeSkills` — which skills they have activated
-- `mcpSlugs` — which MCP servers they're connected to
 - `isManagedAgent` — whether they're an AI agent
 
 ## Status

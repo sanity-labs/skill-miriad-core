@@ -1,4 +1,4 @@
-# Skills & MCP Servers
+# Skills & Custom MCP Servers
 
 ## Skills
 
@@ -16,8 +16,8 @@ skills_list()                                                      // see instal
 ### Activation
 
 ```
-skills_activate({ shortId: "KTtFa8vL" })     // activate for yourself
-skills_deactivate({ shortId: "KTtFa8vL" })   // deactivate
+skills_activate({ shortId: "miriad-core" })     // activate for yourself
+skills_deactivate({ shortId: "miriad-core" })   // deactivate
 ```
 
 Activation injects the skill's `SKILL.md` content into your system prompt on your **next invocation** (not immediately). Each active skill adds to your context, so activate only what's relevant.
@@ -25,9 +25,9 @@ Activation injects the skill's `SKILL.md` content into your system prompt on you
 ### Reading Skill Files
 
 ```
-read({ path: "/SKILL.md", skill: "KTtFa8vL" })
-glob({ pattern: "**", skill: "KTtFa8vL" })
-search({ query: "patterns", skill: "KTtFa8vL" })
+read({ path: "/SKILL.md", skill: "miriad-core" })
+glob({ pattern: "**", skill: "miriad-core" })
+search({ query: "patterns", skill: "miriad-core" })
 ```
 
 Always read `SKILL.md` first — it's the index. Detailed content lives in subdirectories.
@@ -41,39 +41,11 @@ skills_remove({ shortId: "abc123" })      // remove from space
 
 Best practice: keep SKILL.md under 200 lines. Put detailed reference material in separate files.
 
-## MCP Servers
+## Custom MCP Servers
 
-MCP (Model Context Protocol) servers provide tools. Miriad has built-in servers and supports custom external ones.
+Spaces can register external MCP servers for third-party integrations (e.g., Sanity, Stripe, Notion). These provide additional tools accessible through `execute` scripts.
 
-### Built-in Servers
-
-| Server | Tools | Capabilities |
-|--------|-------|-------------|
-| **miriad** | ~27 | Messaging, files, plan, skills, roster |
-| **miriad-config** | ~11 | Environment, secrets, MCP server management, skill management |
-| **miriad-sandbox** | ~20 | Sandbox lifecycle, filesystem, shell, git, tunnels |
-| **miriad-dataset** | ~6 | Dataset CRUD, GROQ queries, document operations |
-| **miriad-vision** | ~1 | Image analysis (describe, extract colors) |
-
-Built-in servers `miriad` and `miriad-config` are always loaded. Use `update_my_mcps` to add optional ones (like `miriad-sandbox`, `miriad-dataset`, or `miriad-vision`) to your tool set.
-
-### Attaching MCP Servers
-
-```
-update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset"] })
-```
-
-**Important:** `update_my_mcps` **replaces** your entire MCP list — always include all servers you want, not just the new one. Changes take effect on your next invocation. Use `set_alarm({ delay: "10s" })` to self-ping and pick up the new tools.
-
-```
-mcp_status()    // check which servers are connected and how many tools each provides
-```
-
-### Custom MCP Servers
-
-Spaces can register external MCP servers for third-party integrations (e.g., Sanity, Stripe, Notion). The `miriad-config` MCP provides tools to manage these:
-
-#### Registering a Server
+### Registering a Server
 
 ```
 mcp_put({
@@ -97,7 +69,7 @@ transfer_secret({
 })
 ```
 
-#### Managing Servers
+### Managing Servers
 
 ```
 mcp_get({ slug: "sanity" })       // get details (URL, name, headers, OAuth status)
@@ -106,17 +78,21 @@ delete_mcp({ slug: "sanity" })    // remove a custom server
 
 `mcp_get` returns the server's OAuth status (`oauth.connected`, `oauth.authorizedAt`) and header keys (values are redacted).
 
-#### Activating for Yourself
+### Using Custom Server Tools
 
-After registering a custom server, add it to your MCP list:
+Once registered and authorized, the server's tools appear in `execute` scripts under the server's slug as a namespace:
 
+```js
+// Inside execute — custom MCP server tools are available
+const projects = await sanity__list_projects({});
+const docs = await sanity__query_documents({
+  resource: { projectId: "abc123", dataset: "production" },
+  query: '*[_type == "article"] | order(_createdAt desc) [0..9]'
+});
 ```
-update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset", "sanity"] })
-```
 
-Then set an alarm to pick up the new tools on your next turn.
+Use `search_tools("sanity")` inside execute to discover available tools from a custom server.
 
 ### GitHub
 
 GitHub integration uses the `gh` CLI in sandboxes rather than an MCP server. Credentials (`GH_TOKEN`, `GITHUB_TOKEN`) are injected into sandboxes from channel environment. See `github-cli.md` for details.
-

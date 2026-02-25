@@ -63,6 +63,26 @@ list_tasks({ includeCompleted: true })    // include completed/failed
 cancel_task({ taskId: "task-123" })       // cancel a scheduled alarm
 ```
 
+## Background Execute
+
+For I/O-heavy pipelines, use `execute({ background: true })` — the script runs in the background and the result arrives as a notification:
+
+```
+execute({
+  script: `
+    // Download, process, transfer — all without blocking conversation
+    const sb = await miriad_sandbox__create({ name: "batch" });
+    // ... heavy work ...
+    await miriad_sandbox__delete({ sandbox: "batch" });
+    return results;
+  `,
+  background: true,
+  description: "Processing batch data"
+})
+```
+
+`web_search`, `web_fetch`, and `web_search_images` are **direct tools** — call them directly, not through execute. Pattern: search first, then pass URLs/data into a background execute for processing.
+
 ## Patterns
 
 - **Quick lookup** → `web_search` (immediate results)

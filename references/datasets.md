@@ -11,20 +11,20 @@ Miriad provides a built-in JSON document database powered by **jsonsphere** (Pos
 
 ## Three Access Patterns
 
-### 1. MCP Tools (Agent ↔ Chorus)
+### 1. Execute Scripts (Agent Tool Calls)
 
-Agents invoked through Chorus automatically get the `miriad-dataset` MCP server with 6 tools:
+Dataset tools are available inside `execute` scripts. Use `search_tools("dataset")` to discover them:
 
 | Tool | Description |
 |------|-------------|
-| `dataset_create` | Create a new dataset (name, title, description) |
-| `dataset_list` | List all datasets in the space |
-| `dataset_delete` | Delete a dataset and all its documents |
-| `dataset_mutate` | Create, update, patch, or delete documents (transactional) |
-| `dataset_query` | Execute a GROQ query |
-| `dataset_get` | Get a single document by `_id` |
+| `miriad_dataset__dataset_create` | Create a new dataset (name, title, description) |
+| `miriad_dataset__dataset_list` | List all datasets in the space |
+| `miriad_dataset__dataset_delete` | Delete a dataset and all its documents |
+| `miriad_dataset__dataset_mutate` | Create, update, patch, or delete documents (transactional) |
+| `miriad_dataset__dataset_query` | Execute a GROQ query |
+| `miriad_dataset__dataset_get` | Get a single document by `_id` |
 
-**Mutations** are passed as a JSON string (MCP SDK limitation). Example:
+**Mutations** are passed as a JSON string. Example:
 
 ```json
 {

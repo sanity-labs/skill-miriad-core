@@ -1,11 +1,32 @@
 ---
 name: miriad-core
-description: "Miriad platform reference: workers (cheap fast sub-agents — use by default, not the exception), send_message (only way to talk), @mentions, file attachments, board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (App + PAT modes, gh CLI, CI monitoring), skills, external MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation, cross-channel file access, presigned S3 uploads, raw file serving."
+description: "Miriad platform reference: direct tools (send_message, set_status, spawn_worker, set_alarm), execute (JavaScript tool chaining — primary surface for multi-step work), search_tools (discover available tools), workers (cheap fast sub-agents — use by default), board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (gh CLI, App + PAT modes), skills, custom MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation."
 ---
 
 # miriad-core
 
 Platform capabilities reference. Every feature available to agents, with patterns and gotchas.
+
+## How Tools Work
+
+Agents have three ways to use tools:
+
+1. **Direct tools** — called directly in conversation: `send_message`, `set_status`, `spawn_worker`, `set_alarm`, `web_search`, `web_fetch`, `execute`, etc.
+2. **Execute scripts** — JavaScript that chains multiple tool calls with zero inference round-trips. **This is the primary surface for multi-step work.** Use `search_tools("keyword")` inside execute to discover available tools.
+3. **Workers** — background sub-agents with scoped tool access. Cheap, fast, parallel. The default for any well-defined task.
+
+```js
+// Execute example: 4 parallel queries in ~1s instead of ~30s sequential
+const [sandboxes, datasets, plan, roster] = await Promise.all([
+  miriad_sandbox__list({}),
+  miriad_dataset__dataset_list({}),
+  miriad__plan_status({}),
+  miriad__get_roster({})
+]);
+return { sandboxes, datasets, plan, roster };
+```
+
+→ `references/execute.md`
 
 ## Communication
 
@@ -13,7 +34,7 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - `@callsign` mentions trigger agent invocation; `@channel` broadcasts to all agents
 - Messages support markdown, file attachments (`attachments` param with board paths), and `[secret:N]` auto-redaction
 - `get_messages` for history (ULID pagination, sender/keyword filters); `message_search` for full-text search
-- `get_roster` shows all members with status, active skills, MCP slugs
+- `get_roster` shows all members with status, active skills
 - `set_status` broadcasts what you're working on (visible in roster + cross-thread)
 → `references/messaging.md`, `references/attachments.md`
 
@@ -21,11 +42,23 @@ Platform capabilities reference. Every feature available to agents, with pattern
 
 - **Workers are the default.** A great agent is a great orchestrator. Workers are cheap, fast sub-agents for ANY well-defined task.
 - `spawn_worker` with a detailed brief + tool list. Workers run in background, file reports when done.
+- Workers can use `execute` for multi-step tool chaining within their scoped tool set.
 - Parallel execution: spawn multiple workers for independent tasks. Reports arrive automatically.
 - The brief IS your work product. If you can write a clear brief, it's a worker's job.
 - NOT using a worker is the exception — only for real-time conversation or decisions requiring full accumulated context.
 - **Critical: save work before deleting sandboxes** — commit to git or write to board first.
 → `references/workers.md`
+
+## Execute — JavaScript Tool Chaining
+
+- `execute` runs JavaScript that calls tools as async functions — **no inference round-trips** between calls
+- Tools use `serverName__toolName` format: `miriad_sandbox__exec({})`, `miriad_dataset__dataset_query({})`
+- `search_tools("keyword")` discovers available tools by name or description
+- `Promise.all()` for parallel calls — 7 tool calls in ~850ms vs ~30-60s sequential
+- `progress("msg")` for real-time updates, `console.log()` for debugging (shown on error only)
+- `background: true` for fire-and-forget — result arrives as notification, keeps conversation responsive
+- **Direct tools** (`web_search`, `web_fetch`, `spawn_worker`, `set_alarm`) are NOT available inside execute — call them directly first, pass results in
+→ `references/execute.md`
 
 ## Files & Board
 
@@ -35,7 +68,7 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - `upload`/`download` for binary files via presigned URLs
 - Cross-channel access: pass `channel` param to read/write other channels' files
 - Skill files: pass `skill` param (shortId) to access skill filesystems
-- **Raw serving**: files at `/channels/:id/raw/*path` with correct Content-Type — enables static sites
+- **Raw serving**: files at `/channels/:id/raw/*path` with correct Content-Type — enables static sites and binary images
 - **Board apps**: HTML files open as iframes with `window.__miriad` (spaceId, channelId) — relative API URLs, no CORS, no auth tokens. Can query datasets directly.
 → `references/filesystem.md`, `references/cross-channel-files.md`, `references/board-apps.md`
 
@@ -69,7 +102,7 @@ Platform capabilities reference. Every feature available to agents, with pattern
 
 - JSON document database (jsonsphere + GROQ). Create, query, mutate, delete documents.
 - Real-time WebSocket listeners via signed URLs (one-time use, 60s TTL, dataset-bound)
-- Three access patterns: MCP tools, REST API (browser), space token (sandboxes)
+- Access via execute (`miriad_dataset__dataset_query`, etc.), REST API (browser board apps), or space token (sandboxes)
 - Lazy provisioning — just start creating datasets, no setup needed
 → `references/datasets.md`
 
@@ -80,11 +113,10 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - CI monitoring: `curl` GitHub Actions API from sandboxes — the commit status API doesn't show Actions
 → `references/github-cli.md`, `references/ci-monitoring.md`
 
-## Skills & MCP
+## Skills & Custom MCP Servers
 
 - Skills inject SKILL.md into system prompt on next invocation. `skills_discover` → `skills_import` → `skills_activate`.
-- External MCP servers: `list_mcps` to discover, `update_my_mcps` to self-configure (takes effect next invocation — use `set_alarm` 30s to self-ping)
-- `mcp_status` to check connection health
+- Custom MCP servers can be registered for third-party integrations (Sanity, etc.) — use `mcp_put` to register, user authorizes OAuth via UI
 → `references/skills-and-mcp.md`
 
 ## Cross-Thread & Memory
@@ -95,20 +127,12 @@ Platform capabilities reference. Every feature available to agents, with pattern
 - Long-term memory: `ltm_search`, `ltm_glob`, `ltm_read` — persistent knowledge shared across all threads
 → `references/threads-and-memory.md`
 
-## Execute — JavaScript Tool Chaining
-
-- `execute` runs JavaScript that calls tools as async functions — **no inference round-trips** between calls
-- Tools available as `serverName__toolName()` (hyphens → underscores): `miriad_sandbox__list({})`, `miriad_dataset__dataset_query({...})`
-- `Promise.all()` for parallel calls — 7 tool calls in ~850ms vs ~30-60s sequential
-- `progress("msg")` for real-time updates, `console.log()` for debugging (shown on error only), `return value` for results
-- Use for: dashboard queries, batch operations, read→transform→write chains, conditional logic
-→ `references/execute.md`
-
 ## Web & Background
 
 - `web_search` (freshness filters: 24h/1w/1m/1y), `web_fetch` (extract from URL with question), `web_search_images`
-- `background_research` / `background_reflect` — async, report back when done
+- These are **direct tools** — call them directly, not through execute
 - `set_alarm` for reminders and scheduled checks. `list_tasks` / `cancel_task` for management.
+- `execute({ background: true })` for fire-and-forget I/O pipelines
 → `references/web-and-background.md`
 
 ## Browser Automation
@@ -120,11 +144,9 @@ Platform capabilities reference. Every feature available to agents, with pattern
 
 ## Stdio MCP Servers
 
-- Run **any stdio MCP server** from a sandbox using `mcpcli` (`npx github:sanity-labs/mcpcli`) — no permanent MCP configuration needed
-- More flexible than mounted MCPs: install, call tools on demand, tear down. No OAuth, no slug registration.
-- `mcpcli` passes full environment to child processes — API keys just work (unlike the Go-based mcptools which drops them)
-- Usage: `mcpcli tools <server-cmd>` to list tools, `mcpcli call <tool> <server-cmd> -p '{...}'` to invoke
-- API keys flow through environment: configure secret in UI → create sandbox (auto-injected) → server reads from env
+- Run **any stdio MCP server** from a sandbox using `mcpcli` (`npx github:sanity-labs/mcpcli`) — no permanent configuration needed
+- More flexible than mounted servers: install, call tools on demand, tear down. No OAuth, no slug registration.
+- `mcpcli` passes full environment to child processes — API keys just work
 - Works with any ecosystem MCP server: fal.ai (18 tools for AI generation), filesystem, databases, etc.
 → `references/stdio-mcp-servers.md`
 

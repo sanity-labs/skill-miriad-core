@@ -1,32 +1,48 @@
-# Execute — JavaScript Tool Chaining
+# Execute — Primary Tool-Calling Surface
 
-The `execute` tool runs JavaScript that can call any MCP tool as an async function — no inference round-trips between calls. This is dramatically faster for multi-step workflows.
+The `execute` tool runs JavaScript that can call any tool as an async function — no inference round-trips between calls. This is the **primary way to call tools** on Miriad.
 
-## Why Use Execute
+## Why Execute
+
+Tools are not loaded into the agent's context window. Instead:
+
+1. **`search_tools("keyword")`** — discover available tools by name or description
+2. **`execute({ script: "..." })`** — call tools as async functions in JavaScript
+
+This keeps context windows lean (no tool definitions dumped in) and makes multi-step work dramatically faster:
 
 | Approach | 7 tool calls |
 |----------|-------------|
-| Sequential (normal) | ~30-60s (7 inference rounds) |
-| Execute script | ~850ms (1 inference round) |
+| Sequential (one per inference round) | ~30-60s |
+| Execute script | ~850ms |
 
-Use `execute` when you need to:
-- **Query multiple sources in parallel** — dashboard-style data gathering
-- **Batch operations** — create/mutate multiple documents in one shot
-- **Read → transform → write** — process data without round-trips
-- **Conditional logic** — branch based on tool results without inference overhead
+## Discovering Tools
+
+Use `search_tools` to find tools — it works both as a direct tool and inside execute scripts:
+
+```js
+// Find dataset tools
+const tools = await search_tools({ query: "dataset" });
+// Returns: [{ name, description, inputSchema }, ...]
+
+// Find sandbox tools
+const tools = await search_tools({ query: "sandbox exec" });
+```
+
+Tools come from multiple sources — platform built-ins (miriad, miriad-sandbox, miriad-dataset, miriad-config, miriad-vision) and any custom MCP servers registered in the space (e.g., Sanity). You don't need to know which server provides a tool — just search and call.
 
 ## Tool Naming Convention
 
-Tools are available as async functions using `serverName__toolName` format with **underscores** (not hyphens):
+Tools are available as async functions using `serverName__toolName` format with **underscores**:
 
-| MCP Server | Function prefix | Example |
-|------------|----------------|---------|
-| miriad | `miriad__` | `miriad__plan_status({})` |
-| miriad-sandbox | `miriad_sandbox__` | `miriad_sandbox__list({})` |
-| miriad-dataset | `miriad_dataset__` | `miriad_dataset__dataset_query({...})` |
-| miriad-config | `miriad_config__` | `miriad_config__get_environment({})` |
-| miriad-vision | `miriad_vision__` | `miriad_vision__vision({...})` |
-| sanity | `sanity__` | `sanity__query_documents({...})` |
+| Source | Function prefix | Example |
+|--------|----------------|---------|
+| Platform (files, plan, messages) | `miriad__` | `miriad__plan_status({})` |
+| Sandboxes | `miriad_sandbox__` | `miriad_sandbox__exec({...})` |
+| Datasets | `miriad_dataset__` | `miriad_dataset__dataset_query({...})` |
+| Config (env, secrets, skills) | `miriad_config__` | `miriad_config__get_environment({})` |
+| Vision | `miriad_vision__` | `miriad_vision__vision({...})` |
+| Custom MCP (e.g., Sanity) | `sanity__` | `sanity__query_documents({...})` |
 
 **Rule:** Hyphens in server names become underscores. The `__` double-underscore separates server from tool.
 
@@ -59,11 +75,10 @@ progress("Processing results...");
 console.log("debug info:", someVar);  // appears in execution log on ERROR only
 ```
 
-Console output is only included when the script fails — keeps successful responses clean. Use it for debugging, not for output.
+Console output is only included when the script fails — keeps successful responses clean.
 
 ### Return values
 ```js
-// Return a value to send it back as the result
 return { count: results.length, items: results };
 ```
 
@@ -78,14 +93,56 @@ try {
 }
 ```
 
-## Sandbox Tools from Execute
+## Background Execution
 
-All sandbox tools work from execute — you can run an entire sandbox lifecycle in one script:
+Use `background: true` for fire-and-forget scripts. The result arrives as a notification message when done — keeps the conversation responsive during heavy I/O:
 
 ```js
-// Create sandbox, run tests, report, cleanup — zero inference round-trips
-const sb = await miriad_sandbox__create({ name: "test-run" });
+execute({
+  script: `
+    const sb = await miriad_sandbox__create({ name: "batch-job" });
+    // ... long-running work ...
+    await miriad_sandbox__delete({ sandbox: "batch-job" });
+    return { done: true, results };
+  `,
+  background: true,
+  description: "Running batch analysis"
+});
+```
+
+Background scripts support `progress()` for real-time status updates.
+
+## Direct Tools (Not in Execute)
+
+Some tools are only available as direct calls — they cannot be called from inside execute scripts:
+
+- `web_search`, `web_fetch`, `web_search_images` — web access
+- `spawn_worker`, `list_workers`, `cancel_worker` — worker management
+- `set_alarm`, `list_tasks`, `cancel_task` — alarms and task management
+- `ltm_search`, `ltm_read`, `ltm_glob` — long-term memory
+- `list_my_threads`, `search_my_threads`, `post_to_thread` — cross-thread
+
+**Pattern:** Call direct tools first, then pass their results into an execute script for processing:
+
+```
+// Step 1: Direct tool call
+web_search_images({ query: "low-poly iceberg" })
+// → returns image URLs
+
+// Step 2: Execute script processes the results
+execute({ script: `
+  const sb = await miriad_sandbox__create({ name: "download" });
+  // download images, process, transfer to board...
+`, background: true })
+```
+
+## Sandbox Tools from Execute
+
+All sandbox tools work from execute — run an entire sandbox lifecycle in one script:
+
+```js
 const sbName = "test-run";
+await miriad_sandbox__create({ name: sbName });
 
 // Clone and test
 await miriad_sandbox__exec({ sandbox: sbName, command: "git clone https://github.com/org/repo.git /home/daytona/repo" });
@@ -100,19 +157,6 @@ await miriad_sandbox__delete({ sandbox: sbName });
 return { tests, pkg };
 ```
 
-Sandbox tool naming follows the same convention: `miriad_sandbox__exec`, `miriad_sandbox__Read`, `miriad_sandbox__Write`, etc.
-
-## Discovering Tools
-
-Use `searchTools()` to find available tools by keyword:
-
-```js
-const tools = await searchTools("dataset");
-// Returns: [{ name, description, serverName, inputSchema }, ...]
-```
-
-This is useful when you're not sure of the exact tool name or want to explore what's available.
-
 ## Security Model
 
 Execute runs in a **SES (Secure ECMAScript) sandbox**:
@@ -121,7 +165,7 @@ Execute runs in a **SES (Secure ECMAScript) sandbox**:
 - **No network** — `fetch`, `XMLHttpRequest`, `WebSocket` unavailable
 - **No process** — `process.env`, `child_process` inaccessible
 - **Frozen prototypes** — `Object.prototype`, `Array.prototype` not extensible
-- **No direct eval** — blocked by SES (indirect via `Function` constructor works but can't escape)
+- **No direct eval** — blocked by SES
 - **Fresh per call** — globalThis is recreated each execution, no state persists between calls
 - **Scoped tools** — only tools granted to the agent/worker appear on globalThis
 
@@ -156,31 +200,27 @@ const [top, count, recent] = await Promise.all([
     query: '*[_type == "movie"] | order(releaseDate desc) [0..2] { title, releaseDate }'
   })
 ]);
-return { topMovies: top.result, totalCount: count.result, recentMovies: recent.result };
+return { topMovies: top, totalCount: count, recentMovies: recent };
 ```
 
-### Read multiple files and combine
+### Multi-file board operations
 ```js
 const files = await miriad__glob({ pattern: "/specs/*.md" });
 const contents = [];
 for (const f of files) {
   const content = await miriad__read({ path: f.path });
-  contents.push({ path: f.path, lines: content.totalLines, preview: content.content.slice(0, 200) });
+  contents.push({ path: f.path, lines: content.totalLines, preview: content.content?.slice(0, 200) });
 }
 return contents;
-```
-
-### Discover available tools
-```js
-// searchTools finds tools by keyword
-const tools = await searchTools("dataset");
-return tools;
 ```
 
 ## Tips
 
 - **Parallel everything** — if calls don't depend on each other, use `Promise.all()`
+- **Use `search_tools`** to discover tools — don't guess at names
 - **Return structured data** — objects and arrays are serialized cleanly
-- **Use progress()** for long scripts — keeps the conversation informed
-- **console.log for debugging** — output only appears when the script errors, not on success. Use `progress()` for status updates, `return` for output.
-- **Keep scripts focused** — one logical operation per execute call. Don't try to build an entire app in one script.
+- **Use `progress()`** for long scripts — keeps the conversation informed
+- **`background: true`** for I/O-heavy pipelines — download, process, transfer without blocking conversation
+- **console.log for debugging** — output only appears when the script errors
+- **Keep scripts focused** — one logical operation per execute call
+- **No HTML comments** — `<!--` in strings triggers SES rejection. Script tags are fine.
