@@ -133,7 +133,7 @@ return { sandboxes, datasets, plan, roster };
 - These are **direct tools** — call them directly, not through execute
 - `set_alarm` for reminders and scheduled checks. `list_tasks` / `cancel_task` for management.
 - `execute({ background: true })` for fire-and-forget I/O pipelines
-→ `references/web-and-background.md`
+→ `references/web-and-workers.md`
 
 ## Browser Automation
 
