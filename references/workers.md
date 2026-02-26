@@ -147,7 +147,7 @@ spawn_worker({
   description: "Short description (shown in worker list)",
   prompt: "Full instructions/brief for the worker",
   tools: ["tool1", "tool2"],  // subset of your available tools
-  model: "workhorse"          // or "reasoning" for complex tasks
+  model: "reasoning"          // for coding; "workhorse" for non-code tasks; "light" for research
 })
 ```
 
@@ -199,14 +199,15 @@ Common tool sets:
 
 | Task | Model |
 |------|-------|
-| Coding, implementation | `workhorse` (most tasks) or `reasoning` (complex architecture) |
-| Research, summarization | `workhorse` |
+| **Any coding task** | `reasoning` — always. Sonnet produces plausible but janky code that costs 5x to debug. Opus gets it right first time. |
+| Research, summarization | `light` |
 | Complex debugging | `reasoning` |
 | Multi-step analysis | `reasoning` |
 | File writing, editing | `workhorse` |
 | Git operations | `workhorse` |
+| Doc formatting, moves | `workhorse` |
 
-When in doubt, use `workhorse`. It's faster and cheaper. Upgrade to `reasoning` when the task requires genuine multi-step reasoning or complex code architecture.
+**Why `reasoning` for all coding:** Workers start fresh with no context overhead, so Opus workers are still cheaper than you. And Sonnet's failure mode is "plausible jank" — code that looks right, passes a quick review, but has subtle issues. The total cost of Sonnet coding + debugging is higher than Opus getting it right the first time.
 
 ---
 
