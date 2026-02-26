@@ -91,7 +91,7 @@ const docs = await sanity__query_documents({
 });
 ```
 
-Use `search_tools("sanity")` inside execute to discover available tools from a custom server.
+Use `list_tools("sanity")` inside execute to discover available tools from a custom server.
 
 ### GitHub
 

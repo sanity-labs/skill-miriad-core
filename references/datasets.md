@@ -13,16 +13,16 @@ Miriad provides a built-in JSON document database powered by **jsonsphere** (Pos
 
 ### 1. Execute Scripts (Agent Tool Calls)
 
-Dataset tools are available inside `execute` scripts. Use `search_tools("dataset")` to discover them:
+Dataset tools are available inside `execute` scripts. Use `list_tools("dataset")` to discover them:
 
 | Tool | Description |
 |------|-------------|
-| `miriad__dataset_create` | Create a new dataset (name, title, description) |
-| `miriad__dataset_list` | List all datasets in the space |
-| `miriad__dataset_delete` | Delete a dataset and all its documents |
-| `miriad__dataset_mutate` | Create, update, patch, or delete documents (transactional) |
-| `miriad__dataset_query` | Execute a GROQ query |
-| `miriad__dataset_get` | Get a single document by `_id` |
+| `dataset_create` | Create a new dataset (name, title, description) |
+| `dataset_list` | List all datasets in the space |
+| `dataset_delete` | Delete a dataset and all its documents |
+| `dataset_mutate` | Create, update, patch, or delete documents (transactional) |
+| `dataset_query` | Execute a GROQ query |
+| `dataset_get` | Get a single document by `_id` |
 
 **Mutations** are passed as a JSON string. Example:
 

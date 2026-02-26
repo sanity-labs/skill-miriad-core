@@ -187,10 +187,10 @@ Spawn the worker, keep working on other things, and review the report when it ar
 Workers only have access to tools you explicitly give them. A worker that needs to run shell commands needs sandbox tools. A worker that needs to write files needs file tools. Think through what the worker will need before spawning.
 
 Common tool sets:
-- **Coding task in sandbox**: `miriad-sandbox__exec`, `miriad-sandbox__Read`, `miriad-sandbox__Write`, `miriad-sandbox__Edit`, `miriad-sandbox__Glob`, `miriad-sandbox__Grep`
-- **Research task**: `web_search`, `web_fetch`, `miriad__write`
-- **Git operations**: `miriad-sandbox__exec`, `miriad-sandbox__git_clone`, `miriad-sandbox__git_commit`, `miriad-sandbox__git_push`
-- **Board file work**: `miriad__read`, `miriad__write`, `miriad__edit`, `miriad__glob`, `miriad__search`
+- **Coding task in sandbox**: `sandbox_exec`, `sandbox_read`, `sandbox_write`, `sandbox_edit`, `sandbox_glob`, `sandbox_grep`
+- **Research task**: `web_search`, `web_fetch`, `write`
+- **Git operations**: `sandbox_exec`, `sandbox_git_clone`, `sandbox_git_commit`, `sandbox_git_push`
+- **Board file work**: `read`, `write`, `edit`, `glob`, `search`
 - **Multi-step workflows**: include `execute` — workers can chain tool calls in scripts just like the primary agent
 
 ---
