@@ -78,11 +78,11 @@ Fires a reminder message after the delay or at the specified time. Use for CI mo
 
 ### Self-Ping Pattern
 
-When you change your MCP tool setup (via `update_my_mcps`), the change takes effect on your next invocation. Set a short alarm to trigger yourself:
+Use `set_alarm` to give yourself a follow-up nudge without waiting for a human message:
 
 ```
-update_my_mcps({ slugs: ["miriad-sandbox", "miriad-dataset"] })
-set_alarm({ note: "MCP tools updated — continue with sandbox work", delay: "30s" })
+set_alarm({ note: "Check if CI passed", delay: "3m" })
+set_alarm({ note: "Worker should be done — review results", delay: "2m" })
 ```
 
-This avoids waiting for a human message to get your next turn. Works any time you need to give yourself a follow-up nudge.
+This is useful after kicking off async work (CI runs, deploys, worker tasks) when you want to check back automatically.
