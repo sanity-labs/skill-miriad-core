@@ -12,8 +12,8 @@ Sandbox tools have output limits to protect your context window:
 
 | Tool | Default limit | Notes |
 |------|--------------|-------|
-| **Read** | 50 lines, 2000 chars/line | Use `offset`/`limit` to navigate. Always shows line numbers. |
-| **exec** | 2 KB output | Set `extended: true` for up to 50 KB. Overflow saved to temp file. |
+| **Read** | 500 lines, 2000 chars/line | Use `offset`/`limit` to navigate. Returns raw source code. |
+| **exec** | 10 KB output | Set `extended: true` for up to 50 KB. Overflow saved to temp file. |
 | **Grep** | 100 matches | Use `offset` for pagination. Line numbers match Read. |
 | **Glob** | 100 files | Use `offset` for pagination. |
 
@@ -24,10 +24,10 @@ When output is truncated, the response tells you where the full output is stored
 ### 1. Get the lay of the land
 
 ```
-Glob({ sandbox: "s", pattern: "*.md" })        # find READMEs, docs
-Glob({ sandbox: "s", pattern: "*.json" })       # find package.json, tsconfig, etc.
-Read({ sandbox: "s", path: "README.md" })       # read the README
-Read({ sandbox: "s", path: "package.json" })    # understand dependencies
+sandbox_glob({ sandbox: "s", pattern: "*.md" })        # find READMEs, docs
+sandbox_glob({ sandbox: "s", pattern: "*.json" })       # find package.json, tsconfig, etc.
+sandbox_read({ sandbox: "s", path: "README.md" })       # read the README
+sandbox_read({ sandbox: "s", path: "package.json" })    # understand dependencies
 ```
 
 ### 2. Understand the directory structure
@@ -56,7 +56,7 @@ This gives you function names, class names, and line numbers — a table of cont
 
 ```
 # grep told you `authenticate` is at line 47
-Read({ sandbox: "s", path: "src/auth.ts", offset: 45, limit: 30 })
+sandbox_read({ sandbox: "s", path: "src/auth.ts", offset: 45, limit: 30 })
 ```
 
 ### 4. Use grep to find specific code
@@ -65,13 +65,13 @@ Grep is your best friend. It returns line numbers that map directly to Read offs
 
 ```
 # Find where a function is defined
-Grep({ sandbox: "s", pattern: "function handleAuth", include: "*.ts" })
+sandbox_grep({ sandbox: "s", pattern: "function handleAuth", include: "*.ts" })
 
 # Find all usages of a type
-Grep({ sandbox: "s", pattern: "AuthConfig", include: "*.ts" })
+sandbox_grep({ sandbox: "s", pattern: "AuthConfig", include: "*.ts" })
 
 # Find TODO/FIXME comments
-Grep({ sandbox: "s", pattern: "TODO|FIXME" })
+sandbox_grep({ sandbox: "s", pattern: "TODO|FIXME" })
 ```
 
 When grep tells you something is at line 142, you can `Read(path, offset=140, limit=20)` to see it in context.
@@ -100,17 +100,17 @@ exec({ sandbox: "s", command: "grep -rl 'from.*./auth' src/" })
 ### ❌ Reading files sequentially
 ```
 # DON'T do this — wastes context reading code you don't need
-Read({ path: "big-file.ts" })                    # lines 1-50
-Read({ path: "big-file.ts", offset: 50 })        # lines 50-100
-Read({ path: "big-file.ts", offset: 100 })       # lines 100-150
+sandbox_read({ path: "big-file.ts" })                    # lines 1-500
+sandbox_read({ path: "big-file.ts", offset: 500 })       # lines 500-1000
+sandbox_read({ path: "big-file.ts", offset: 1000 })      # lines 1000-1500
 # ... you've now burned 150 lines of context and maybe found what you need
 ```
 
 ### ✅ Jump to what you need
 ```
 # DO this — find first, read targeted
-Grep({ pattern: "handleAuth", include: "*.ts" }) # → big-file.ts:87
-Read({ path: "big-file.ts", offset: 85, limit: 30 })  # just the function
+sandbox_grep({ pattern: "handleAuth", include: "*.ts" }) # → big-file.ts:87
+sandbox_read({ path: "big-file.ts", offset: 85, limit: 30 })  # just the function
 ```
 
 ### ❌ Using exec to dump entire files
@@ -129,15 +129,15 @@ exec({ command: "head -20 src/big-file.ts" })
 ### ❌ Broad glob/grep patterns
 ```
 # DON'T — returns hundreds of results
-Grep({ pattern: "import", include: "*.ts" })
-Glob({ pattern: "*" })
+sandbox_grep({ pattern: "import", include: "*.ts" })
+sandbox_glob({ pattern: "*" })
 ```
 
 ### ✅ Narrow your search
 ```
 # DO — specific patterns, specific directories
-Grep({ pattern: "import.*auth", include: "*.ts", path: "src/routes" })
-Glob({ pattern: "*.test.ts", path: "src/routes" })
+sandbox_grep({ pattern: "import.*auth", include: "*.ts", path: "src/routes" })
+sandbox_glob({ pattern: "*.test.ts", path: "src/routes" })
 ```
 
 ## When to Use Extended exec
