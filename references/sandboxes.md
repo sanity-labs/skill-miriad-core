@@ -69,19 +69,17 @@ sandbox_glob({ sandbox: "my-sandbox", pattern: "*.ts" })
 sandbox_grep({ sandbox: "my-sandbox", pattern: "TODO", path: "/home/daytona/project" })
 ```
 
-### Read: line numbers and paging
+### Read: raw content and paging
 
-sandbox_read returns **line-numbered output** with padded alignment:
-```
- 1	func main() {
- 2	    fmt.Println("hello")
- 3	}
+sandbox_read returns **raw source code** — no line numbers, no decoration:
+```json
+{ "content": "func main() {\n    fmt.Println(\"hello\")\n}", "total_lines": 3, ... }
 ```
 
-Default limit is **50 lines**. Response includes `total_lines`, `total_bytes`, `offset`, and `lines_returned`. When there's more content, a hint nudges you toward targeted reads:
+Default limit is **500 lines** with a 50KB byte cap. Response includes `total_lines`, `total_bytes`, `offset`, and `lines_returned`. When there's more content, a hint nudges you toward targeted reads:
 
 ```
-// Default: first 50 lines
+// Default: first 500 lines
 sandbox_read({ sandbox: "s", path: "/home/daytona/big-file.ts" })
 // → { total_lines: 500, lines_returned: 50, hint: "💡 Use Grep to find specific code..." }
 
