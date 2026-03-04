@@ -1,6 +1,6 @@
 ---
 name: miriad-core
-description: "Miriad platform reference: execute (JavaScript tool chaining — primary surface for multi-step work), list_tools/document_tool (discover tools), workers (cheap fast sub-agents — use by default), board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (gh CLI, App + PAT modes), skills, custom MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation."
+description: "Miriad platform reference: execute (JavaScript tool chaining — primary surface for multi-step work), list_tools/document_tool (discover tools), workers (cheap fast sub-agents — use by default), board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (gh CLI, App + PAT modes), skills, custom MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation., embedded LLM functions (reason/comprehend for inline data processing)"
 ---
 
 # miriad-core
@@ -59,6 +59,19 @@ return { sandboxes, datasets, plan, roster };
 - `background: true` for fire-and-forget — result arrives as notification, keeps conversation responsive
 - **Direct tools** (`web_search`, `web_fetch`, `spawn_worker`, `set_alarm`) are NOT available inside execute — call them directly first, pass results in
 → `references/execute.md`
+
+
+## Embedded LLM Functions — reason() and comprehend()
+
+- **reason()** — inline LLM call inside execute scripts. Like `jq()` for unstructured data. Processes one item with selectable model tier.
+  - `reason({ prompt, data, model: "light"|"workhorse"|"reasoning" })` → `{ result }`
+  - Use for: extraction, classification, synthesis, transformation
+- **comprehend()** — batch fan-out over arrays. Light model only, auto-batches at ~150k tokens, parallel processing.
+  - `comprehend({ prompt, items })` → array of results
+  - Use for: classifying/tagging hundreds of items, down-selecting before deeper analysis
+- **The pipeline pattern**: `comprehend()` (fan out, classify) → filter → `reason()` (synthesize with workhorse). Only the final result enters your context window.
+- Workers can use both — run entire comprehend→reason pipelines in background without touching the agent's context.
+→ `references/embedded-llm.md`
 
 ## Files & Board
 
