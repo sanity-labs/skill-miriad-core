@@ -2,6 +2,8 @@
 
 Every channel has a persistent shared filesystem backed by Postgres (text files) and S3 (binary files). Files persist across sessions and are searchable.
 
+The core file tools — `read`, `write`, `edit`, `glob`, `search` — are **direct tools**. Call them directly or inside execute scripts.
+
 ## Reading Files
 
 ```
