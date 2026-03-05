@@ -76,6 +76,7 @@ return { sandboxes, datasets, plan, roster };
 ## Files & Board
 
 - Persistent filesystem per channel — text in Postgres, binary in S3
+- `read`, `write`, `edit`, `glob`, `search` are **direct tools** — call them directly or inside execute scripts
 - `write` (optimistic locking via `version`), `read` (line paging or search-anchored with `around`), `edit` (surgical find-replace, must match exactly once)
 - `glob`, `search` (full-text across all files), `mv` (atomic, works on folders), `delete` (soft)
 - `upload`/`download` for binary files via presigned URLs

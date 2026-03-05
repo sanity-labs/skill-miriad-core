@@ -92,7 +92,7 @@ sandbox_read({ sandbox: "s", path: "/home/daytona/big-file.ts", limit: 2000 })
 
 **Best practice:** Use `sandbox_grep` to find what you're looking for first, then `sandbox_read` with `offset` to see the surrounding context. Avoid reading entire large files.
 
-**Note**: `sandbox_glob` is already recursive — use `*.ts` not `**/*.ts`.
+**Note**: `sandbox_glob` is already recursive — use `*.ts` not `**/*.ts`. Use the `path` parameter to scope the search directory.
 
 ## Git
 
