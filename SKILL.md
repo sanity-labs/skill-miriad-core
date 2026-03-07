@@ -1,6 +1,6 @@
 ---
 name: miriad-core
-description: "Miriad platform reference: execute (JavaScript tool chaining — primary surface for multi-step work), list_tools/document_tool (discover tools), workers (cheap fast sub-agents — use by default), board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (gh CLI, App + PAT modes), skills, custom MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation., embedded LLM functions (reason/comprehend for inline data processing)"
+description: "Miriad platform reference: execute (JavaScript tool chaining — primary surface for multi-step work), list_tools/document_tool (discover tools), workers (cheap fast sub-agents — use by default), board filesystem with optimistic locking, plan system (specs + tasks with CAS), sandboxes (shell, git, tunnels, GPU, BYOI connectors), datasets (GROQ queries, real-time listeners), board apps (HTML served as iframes with window.__miriad), secrets (auto-redact, transfer_secret, 15min TTL), environment vars, GitHub (gh CLI, App + PAT modes), skills, custom MCP servers, stdio MCPs (run any MCP server from a sandbox via mcpcli), cross-thread bridging, long-term memory, web search, browser automation., embedded LLM functions (reason/comprehend for inline data processing)"
 ---
 
 # miriad-core
@@ -105,7 +105,8 @@ return { sandboxes, datasets, plan, roster };
 ## Sandboxes
 
 - Isolated containers: shell (`exec`), filesystem, git (clone/commit/push with auto-injected creds), tunnels (public URLs for web apps)
-- **Daytona** (CPU, always available) and **RunPod** (GPU, BYOK)
+- **Daytona** (CPU, always available), **RunPod** (GPU, BYOK), and **BYOI Connectors** (user-provided machines — laptops, servers, phones)
+- BYOI connectors use `connector:<slug>` as provider type. If a connector is the only provider, it becomes the default automatically.
 - Channel env + secrets auto-injected. Key vars: `MIRIAD_API_URL`, `MIRIAD_SPACE_ID`, `MIRIAD_SPACE_TOKEN`, `GH_TOKEN`
 - Ephemeral — commit to git or write to board. Auto-stop after 30min idle.
 - `Glob` is already recursive — use `*.ts` not `**/*.ts`
