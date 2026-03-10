@@ -6,8 +6,93 @@ Sandboxes are isolated compute containers for running code, building projects, a
 
 - **Daytona** — Built-in, always available. CPU-only. Resources: 1-4 CPU, 1-4 GiB memory, 3-10 GiB disk.
 - **RunPod** — BYOK (requires `RUNPOD_API_KEY` in space secrets). GPU support for ML/AI workloads.
+- **BYOI Connectors** — User-provided machines (laptops, servers, phones). Requires running the Miriad connector daemon. See [BYOI Connectors](#byoi-connectors-bring-your-own-infrastructure) below.
 
 Use `sandbox_explain_options` to see available providers and their capabilities.
+
+## BYOI Connectors (Bring Your Own Infrastructure)
+
+Connect to real hardware — laptops, servers, phones, anything running the Miriad connector daemon. All standard sandbox tools work transparently on connected infrastructure.
+
+Users run a lightweight daemon on their machine that connects to Miriad via WebSocket. While connected, the machine appears as a compute provider alongside Daytona and RunPod.
+
+**Provider type format**: `connector:<slug>` — e.g., `connector:my-laptop`, `connector:build-server`
+
+### Discovery
+
+```
+// Check what a connected machine offers
+sandbox_explain_options({ provider: "connector:my-laptop" })
+// → { provider: "connector:my-laptop", description: "MacBook Pro M2, 16GB RAM", status: "connected" }
+
+// sandbox_list shows sandboxes across ALL providers including connectors
+sandbox_list()
+```
+
+If a connector is the **only available provider** (no Daytona, no RunPod), it becomes the default automatically — `sandbox_create({ name: "foo" })` just works without specifying `provider`.
+
+### Creating Sandboxes
+
+```
+// Explicit provider — target a specific connected machine
+sandbox_create({
+  name: "dev-env",
+  provider: "connector:my-laptop",
+  description: "Development environment on user's MacBook"
+})
+
+// If connector is the only/default provider, no provider param needed
+sandbox_create({ name: "dev-env" })
+```
+
+### What "Sandbox" Means on a Connector
+
+On Daytona/RunPod, sandboxes are isolated containers. On BYOI connectors, **sandboxes are directories on the host machine** — organizational separation, not security isolation. The daemon has full shell access to the host.
+
+This means:
+- Sandboxes share the host's filesystem, network, and installed tools
+- No Docker or container runtime needed on the host
+- `sandbox_exec` runs commands directly on the host
+- All the host's tools, SDKs, and devices are accessible (e.g., `adb` for Android)
+
+### Usage Examples
+
+```
+// Shell commands — run directly on the host machine
+sandbox_exec({ sandbox: "dev-env", command: "uname -a" })
+sandbox_exec({ sandbox: "dev-env", command: "ls /Users/even/projects" })
+sandbox_exec({ sandbox: "dev-env", command: "adb devices" })  // Android SDK
+
+// File operations — use host paths
+sandbox_read({ sandbox: "dev-env", path: "/Users/even/projects/app/src/index.ts" })
+sandbox_glob({ sandbox: "dev-env", pattern: "*.swift", path: "/Users/even/projects/ios-app" })
+
+// File transfer between board and connected machine
+sandbox_transfer({
+  sandbox: "dev-env",
+  source: "/Users/even/screenshots/bug.png",
+  destination: { path: "/screenshots/bug.png" }
+})
+```
+
+### Differences from Cloud Sandboxes
+
+| Feature | Daytona/RunPod | BYOI Connector |
+|---------|---------------|----------------|
+| Isolation | Container (isolated) | Directory (shared host) |
+| Default path | `/home/daytona/` | Host filesystem |
+| Start/stop | Hibernate + wake | No-op (always "running") |
+| File transfer limit | Large files via S3 | 512KB via base64 over Redis |
+| Auto-stop | 30min idle timeout | N/A — available while daemon runs |
+| Tunnels | `sandbox_tunnel` for public URLs | Not supported |
+
+### BYOI Gotchas
+
+- **Ephemeral availability** — connectors only exist while the daemon is running. If the user closes their laptop, the connector disappears.
+- **No container isolation** — commands run as the daemon's user on the host. Be careful with destructive operations.
+- **File transfer size limit** — 512KB per file via `sandbox_transfer`. For larger files, use git or cloud storage.
+- **Host paths** — use absolute paths for the host OS (`/Users/...` on macOS, `/home/...` on Linux).
+- **One connection per slug** — a second daemon with the same slug evicts the first.
 
 ## Lifecycle
 
