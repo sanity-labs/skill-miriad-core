@@ -39,7 +39,7 @@ Workers are task threads that run asynchronously with full MCP tool access and C
 
 ```
 spawn_worker({ task: "Research Rust async runtime options and summarize tradeoffs" })
-spawn_worker({ task: "Review the PR diff for security issues", tools: ["web_fetch"] })
+spawn_worker({ task: "Review the PR diff for security issues" })
 ```
 
 Workers inherit the parent agent's MCP servers and can call any tool the parent can. Results are reported back when the worker completes.

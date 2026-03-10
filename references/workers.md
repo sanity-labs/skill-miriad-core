@@ -110,8 +110,6 @@ Task:
 
 The output should be [description of done state].
 
-Use these tools: [tool1, tool2, tool3]
-
 Constraints:
 - [constraint]
 - [constraint]
@@ -146,7 +144,6 @@ The bad brief will produce mediocre output. The good brief will produce somethin
 spawn_worker({
   description: "Short description (shown in worker list)",
   prompt: "Full instructions/brief for the worker",
-  tools: ["tool1", "tool2"],  // subset of your available tools
   model: "reasoning"          // for coding; "workhorse" for non-code tasks; "light" for research
 })
 ```
@@ -154,7 +151,6 @@ spawn_worker({
 **Parameters:**
 - `description` — shown in `list_workers` output; make it scannable
 - `prompt` — the full brief; this is what the worker sees
-- `tools` — give the worker exactly what it needs (sandbox tools, file tools, etc.)
 - `model` — `workhorse` for most tasks; `reasoning` for complex coding, architecture decisions, or multi-step analysis
 
 The worker automatically gets a `complete` tool to file its report when done. The report arrives in your message stream.
@@ -182,16 +178,9 @@ Worker reports arrive automatically. You don't need to:
 
 Spawn the worker, keep working on other things, and review the report when it arrives.
 
-### 🟢 Give workers the right tools
+### 🟢 Workers inherit your tools
 
-Workers only have access to tools you explicitly give them. A worker that needs to run shell commands needs sandbox tools. A worker that needs to write files needs file tools. Think through what the worker will need before spawning.
-
-Common tool sets:
-- **Coding task in sandbox**: `sandbox_exec`, `sandbox_read`, `sandbox_write`, `sandbox_edit`, `sandbox_glob`, `sandbox_grep`
-- **Research task**: `web_search`, `web_fetch`, `write`
-- **Git operations**: `sandbox_exec`, `sandbox_git_clone`, `sandbox_git_commit`, `sandbox_git_push`
-- **Board file work**: `read`, `write`, `edit`, `glob`, `search`
-- **Multi-step workflows**: include `execute` — workers can chain tool calls in scripts just like the primary agent
+Workers have access to the same tools as the parent agent. No need to specify a tool subset — they can call any tool you can, including sandbox tools, file tools, dataset tools, and execute scripts.
 
 ---
 

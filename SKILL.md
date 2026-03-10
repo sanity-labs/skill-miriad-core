@@ -41,8 +41,8 @@ return { sandboxes, datasets, plan, roster };
 ## Workers — Orchestrate, Don't Do
 
 - **Workers are the default.** A great agent is a great orchestrator. Workers are cheap, fast sub-agents for ANY well-defined task.
-- `spawn_worker` with a detailed brief + tool list. Workers run in background, file reports when done.
-- Workers can use `execute` for multi-step tool chaining within their scoped tool set.
+- `spawn_worker` with a detailed brief. Workers run in background, file reports when done.
+- Workers can use `execute` for multi-step tool chaining. They inherit all parent agent tools.
 - Parallel execution: spawn multiple workers for independent tasks. Reports arrive automatically.
 - The brief IS your work product. If you can write a clear brief, it's a worker's job.
 - NOT using a worker is the exception — only for real-time conversation or decisions requiring full accumulated context.

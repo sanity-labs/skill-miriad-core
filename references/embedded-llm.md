@@ -219,7 +219,6 @@ spawn_worker({
     4. Use reason() with workhorse to extract structured pricing
     5. Write results to /analysis/pricing-report.json on the board
   `,
-  tools: ["dataset_query", "write"],
   model: "workhorse"
 });
 ```
