@@ -73,21 +73,16 @@ sandbox_grep({ sandbox: "my-sandbox", pattern: "TODO", path: "/home/daytona/proj
 
 sandbox_read returns **raw source code** — no line numbers, no decoration:
 ```json
-{ "content": "func main() {\n    fmt.Println(\"hello\")\n}", "total_lines": 3, ... }
+{ "content": "func main() {\n    fmt.Println(\"hello\")\n}", "totalLines": 3 }
 ```
 
-Default limit is **500 lines** with a 50KB byte cap. Response includes `total_lines`, `total_bytes`, `offset`, and `lines_returned`. When there's more content, a hint nudges you toward targeted reads:
+Returns all lines by default. Use `offset`/`limit` to page through large files:
 
 ```
-// Default: first 500 lines
+// Default: entire file
 sandbox_read({ sandbox: "s", path: "/home/daytona/big-file.ts" })
-// → { total_lines: 500, lines_returned: 50, hint: "💡 Use Grep to find specific code..." }
-
 // Jump to a specific region
 sandbox_read({ sandbox: "s", path: "/home/daytona/big-file.ts", offset: 100, limit: 30 })
-
-// Max: 2000 lines per read
-sandbox_read({ sandbox: "s", path: "/home/daytona/big-file.ts", limit: 2000 })
 ```
 
 **Best practice:** Use `sandbox_grep` to find what you're looking for first, then `sandbox_read` with `offset` to see the surrounding context. Avoid reading entire large files.

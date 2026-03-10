@@ -10,14 +10,14 @@ How to efficiently explore and understand codebases in sandboxes. Read this once
 
 Sandbox tools have output limits to protect your context window:
 
-| Tool | Default limit | Notes |
-|------|--------------|-------|
-| **Read** | 500 lines, 2000 chars/line | Use `offset`/`limit` to navigate. Returns raw source code. |
-| **exec** | 10 KB output | Set `extended: true` for up to 50 KB. Overflow saved to temp file. |
-| **Grep** | 100 matches | Use `offset` for pagination. Line numbers match Read. |
-| **Glob** | 100 files | Use `offset` for pagination. |
+Sandbox tools emit **raw output** — no truncation, no pagination limits. The execute layer handles context management.
 
-When output is truncated, the response tells you where the full output is stored (as a temp file in the sandbox). You can then grep/head/tail that file to find what you need.
+| Tool | Output | Notes |
+|------|--------|-------|
+| **Read** | Raw source code | Use `offset`/`limit` to navigate. Returns all lines by default. |
+| **exec** | Raw stdout/stderr | Full command output. |
+| **Grep** | All matches | Structured: file, line number, content per match. |
+| **Glob** | All files | Use `path` to scope the search directory. |
 
 ## Workflow: Exploring a New Codebase
 
@@ -140,15 +140,13 @@ sandbox_grep({ pattern: "import.*auth", include: "*.ts", path: "src/routes" })
 sandbox_glob({ pattern: "*.test.ts", path: "src/routes" })
 ```
 
-## When to Use Extended exec
+## Managing Large Output
 
-Set `extended: true` when you genuinely need more output:
+Sandbox tools emit raw output. For large output, pipe through shell tools:
 
-- **Test results**: `exec({ command: "npm test", extended: true })` — test output is often 5-20 KB
-- **Build logs**: `exec({ command: "npm run build", extended: true })` — build errors need full context
-- **Diffs**: `exec({ command: "git diff", extended: true })` — diffs can be large
-
-Even with `extended: true`, output over 50 KB is saved to a temp file. The response tells you the file path — use grep/head/tail on it.
+- **Test results**: `exec({ command: "npm test 2>&1 | tail -100" })`
+- **Build logs**: `exec({ command: "npm run build 2>&1 | grep -n 'error'" })`
+- **Diffs**: `exec({ command: "git diff --stat" })` — summary first, then targeted reads
 
 ## Quick Reference
 
