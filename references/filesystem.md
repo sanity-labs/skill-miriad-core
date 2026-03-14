@@ -98,6 +98,24 @@ glob({ pattern: "**", skill: "KTtFa8vL" })
 
 Use the skill's shortId (from `skills_list`).
 
+## URL Shortcut Files
+
+Create `.url` or `.webloc` files to add clickable links to the board. They appear as link tiles in the file browser.
+
+```
+// Windows/generic .url format
+write({ path: "/links/github-repo.url", content: "[InternetShortcut]\nURL=https://github.com/org/repo\n" })
+
+// macOS .webloc format (XML plist)
+write({ path: "/links/docs.webloc", content: `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict><key>URL</key><string>https://docs.example.com</string></dict>
+</plist>` })
+```
+
+The `.url` format is simpler — use it by default. Great for bookmarking PRs, docs, dashboards, or any reference links the team needs.
+
 ## Raw File Serving
 
 Board files are also accessible via HTTP at `/channels/:id/raw/*path` with correct Content-Type headers. Directories with an `index.html` are served automatically. This enables hosting static sites and board apps directly from the filesystem.

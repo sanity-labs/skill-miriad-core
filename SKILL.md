@@ -83,6 +83,7 @@ return { sandboxes, datasets, plan, roster };
 - Cross-channel access: pass `channel` param to read/write other channels' files
 - Skill files: pass `skill` param (shortId) to access skill filesystems
 - **Raw serving**: files at `/channels/:id/raw/*path` with correct Content-Type — enables static sites and binary images
+- **URL shortcuts**: `.url` files create clickable link tiles on the board — great for PRs, docs, dashboards
 - **Board apps**: HTML files open as iframes with `window.__miriad` (spaceId, channelId) — relative API URLs, no CORS, no auth tokens. Can query datasets directly.
 → `references/filesystem.md`, `references/cross-channel-files.md`, `references/board-apps.md`
 
