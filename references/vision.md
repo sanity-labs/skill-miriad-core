@@ -51,6 +51,16 @@ vision({
 | `image` | string or object | Yes | Image source — URL string or `{ path, channel?, fs?, sandbox? }` |
 | `prompt` | string | No | Custom prompt for `describe` / `detect` strategies |
 
+## Discovery
+
+Check the full parameter schema anytime:
+
+```javascript
+document_tool({ name: "vision" })
+```
+
+This shows all accepted image source formats and available strategies — useful when you're unsure about the exact parameter shape.
+
 ## Tips
 
 - **Don't download images to analyze them** — pass URLs directly. The tool handles fetching internally.
